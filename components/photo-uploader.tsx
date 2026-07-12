@@ -126,7 +126,7 @@ export default function PhotoUploader({
   return (
     <div>
       {loading ? (
-        <div className="flex items-center gap-2 py-6 text-sm text-gray-500">
+        <div className="flex items-center gap-2 py-6 text-sm text-slate-500">
           <Spinner className="h-4 w-4" /> Memuat foto…
         </div>
       ) : (
@@ -138,10 +138,10 @@ export default function PhotoUploader({
                 <img
                   src={p.url}
                   alt="Dokumentasi pertemuan"
-                  className="h-32 w-44 rounded-xl border border-gray-200 object-cover"
+                  className="h-32 w-44 rounded-xl border border-slate-200 object-cover"
                 />
               ) : (
-                <div className="flex h-32 w-44 items-center justify-center rounded-xl border border-gray-200 bg-gray-50 text-xs text-gray-400">
+                <div className="flex h-32 w-44 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-400">
                   Gagal memuat
                 </div>
               )}
@@ -159,7 +159,7 @@ export default function PhotoUploader({
 
           {!readOnly && photos.length < 2 && (
             <label
-              className={`flex h-32 w-44 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-gray-300 text-gray-400 hover:border-blue-400 hover:text-blue-500 ${
+              className={`flex h-32 w-44 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-slate-300 text-slate-400 hover:border-blue-400 hover:text-blue-500 ${
                 uploading ? 'pointer-events-none opacity-50' : ''
               }`}
             >
@@ -185,7 +185,7 @@ export default function PhotoUploader({
           )}
 
           {photos.length === 0 && (readOnly || photos.length >= 2) && (
-            <p className="py-4 text-sm text-gray-400">Belum ada dokumentasi.</p>
+            <p className="py-4 text-sm text-slate-400">Belum ada dokumentasi.</p>
           )}
         </div>
       )}

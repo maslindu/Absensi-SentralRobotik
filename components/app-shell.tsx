@@ -75,14 +75,14 @@ export default function AppShell({
   return (
     <div className="flex min-h-screen">
       {/* Sidebar desktop */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-gray-200 bg-white md:flex">
-        <div className="flex items-center gap-2 border-b border-gray-100 px-5 py-4">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-slate-200 bg-white md:flex">
+        <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-4">
           <span className="text-xl">🤖</span>
           <div>
             <p className="text-sm font-bold leading-tight">
               Presensi Robotik
             </p>
-            <p className="text-xs text-gray-500">Soloraya</p>
+            <p className="text-xs text-slate-500">Sentral Robotik</p>
           </div>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
@@ -93,18 +93,18 @@ export default function AppShell({
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium ${
                 isActive(item.href)
                   ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50'
+                  : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
               <span>{item.icon}</span> {item.label}
             </Link>
           ))}
         </nav>
-        <div className="border-t border-gray-100 p-4">
+        <div className="border-t border-slate-100 p-4">
           <p className="truncate text-sm font-medium text-gray-800">
             {fullName}
           </p>
-          <p className="text-xs text-gray-500">{ROLE_LABEL[role]}</p>
+          <p className="text-xs text-slate-500">{ROLE_LABEL[role]}</p>
           <button
             onClick={handleLogout}
             disabled={signingOut}
@@ -117,7 +117,7 @@ export default function AppShell({
 
       {/* Konten utama */}
       <div className="flex min-h-screen flex-1 flex-col md:pl-60">
-        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 md:px-6">
+        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:px-6">
           <div className="flex items-center gap-2 md:hidden">
             <span className="text-lg">🤖</span>
             <span className="text-sm font-bold">Presensi Robotik</span>
@@ -134,11 +134,11 @@ export default function AppShell({
             )}
           </div>
           <div className="hidden items-center gap-3 md:flex">
-            <span className="text-sm text-gray-600">{fullName}</span>
+            <span className="text-sm text-slate-600">{fullName}</span>
             <button
               onClick={handleLogout}
               disabled={signingOut}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
             >
               Keluar
             </button>
@@ -157,13 +157,13 @@ export default function AppShell({
         </main>
 
         {/* Bottom nav mobile */}
-        <nav className="fixed inset-x-0 bottom-0 z-30 flex overflow-x-auto border-t border-gray-200 bg-white md:hidden">
+        <nav className="fixed inset-x-0 bottom-0 z-30 flex overflow-x-auto border-t border-slate-200 bg-white md:hidden">
           {nav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className={`flex min-w-[72px] flex-1 flex-col items-center gap-0.5 px-2 py-2 text-[11px] font-medium ${
-                isActive(item.href) ? 'text-blue-700' : 'text-gray-500'
+                isActive(item.href) ? 'text-blue-700' : 'text-slate-500'
               }`}
             >
               <span className="text-lg leading-none">{item.icon}</span>

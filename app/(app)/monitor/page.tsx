@@ -130,17 +130,17 @@ export default function MonitorPage() {
       </div>
 
       <div className="mb-5 grid grid-cols-3 gap-3">
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
+        <div className="rounded-xl border border-slate-200 shadow-sm bg-white p-4">
           <p className="text-2xl font-bold">{meetings.length}</p>
-          <p className="text-xs text-gray-500">Pertemuan</p>
+          <p className="text-xs text-slate-500">Pertemuan</p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
+        <div className="rounded-xl border border-slate-200 shadow-sm bg-white p-4">
           <p className="text-2xl font-bold">{uniqueTeachers}</p>
-          <p className="text-xs text-gray-500">Guru mengajar</p>
+          <p className="text-xs text-slate-500">Guru mengajar</p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
+        <div className="rounded-xl border border-slate-200 shadow-sm bg-white p-4">
           <p className="text-2xl font-bold">{uniqueSchools}</p>
-          <p className="text-xs text-gray-500">Sekolah</p>
+          <p className="text-xs text-slate-500">Sekolah</p>
         </div>
       </div>
 
@@ -152,10 +152,10 @@ export default function MonitorPage() {
           hint="Coba ubah bulan atau filter lainnya."
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
           <table className="w-full min-w-[720px] text-sm">
             <thead>
-              <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-500">
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <th className="px-4 py-3">Tanggal</th>
                 <th className="px-4 py-3">Guru Pelaksana</th>
                 <th className="px-4 py-3">Sekolah</th>
@@ -169,7 +169,7 @@ export default function MonitorPage() {
               {meetings.map((m) => (
                 <tr
                   key={m.id}
-                  className="border-b border-gray-50 hover:bg-gray-50"
+                  className="border-b border-slate-50 transition-colors hover:bg-slate-50/50 hover:bg-slate-50"
                 >
                   <td className="px-4 py-3 whitespace-nowrap">
                     <Link
@@ -182,12 +182,12 @@ export default function MonitorPage() {
                   <td className="px-4 py-3">
                     {m.actual_teacher?.full_name}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-slate-600">
                     {m.schools?.name}
                   </td>
                   <td className="px-4 py-3">{m.classes?.name}</td>
                   <td className="px-4 py-3">{m.meeting_number}</td>
-                  <td className="max-w-[240px] truncate px-4 py-3 text-gray-600">
+                  <td className="max-w-[240px] truncate px-4 py-3 text-slate-600">
                     {m.material || '-'}
                   </td>
                   <td className="px-4 py-3">

@@ -154,10 +154,10 @@ export default function TermsPage() {
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
           <table className="w-full min-w-[640px] text-sm">
             <thead>
-              <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-500">
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <th className="px-4 py-3">Tahun Ajaran</th>
                 <th className="px-4 py-3">Semester</th>
                 <th className="px-4 py-3">Mulai</th>
@@ -168,7 +168,7 @@ export default function TermsPage() {
             </thead>
             <tbody>
               {terms.map((t) => (
-                <tr key={t.id} className="border-b border-gray-50">
+                <tr key={t.id} className="border-b border-slate-50 transition-colors hover:bg-slate-50/50">
                   <td className="px-4 py-3 font-medium">{t.year_label}</td>
                   <td className="px-4 py-3 capitalize">{t.semester}</td>
                   <td className="px-4 py-3">{formatDateShort(t.start_date)}</td>
@@ -250,7 +250,7 @@ export default function TermsPage() {
               />
             </Field>
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-slate-700">
             <input
               type="checkbox"
               checked={form.is_active}

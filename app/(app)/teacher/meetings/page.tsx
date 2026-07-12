@@ -101,25 +101,25 @@ export default function TeacherMeetingsPage() {
             <Link
               key={m.id}
               href={`/teacher/meetings/${m.id}`}
-              className="rounded-xl border border-gray-200 bg-white p-4 transition hover:border-blue-300 hover:shadow-sm"
+              className="rounded-xl border border-slate-200 shadow-sm bg-white p-4 transition hover:border-blue-300 hover:shadow-sm"
             >
               <div className="flex items-center justify-between">
                 <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
                   Pertemuan ke-{m.meeting_number}
                 </span>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-slate-400">
                   📷 {m.meeting_photos?.length ?? 0}/2
                 </span>
               </div>
-              <p className="mt-2 font-semibold text-gray-900">
+              <p className="mt-2 font-semibold text-slate-900">
                 {m.schools?.name} — Kelas {m.classes?.name}
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-slate-500">
                 {formatDateShort(m.meeting_date)} ·{' '}
                 {m.actual_teacher?.full_name}
               </p>
               {m.material && (
-                <p className="mt-2 line-clamp-2 text-sm text-gray-600">
+                <p className="mt-2 line-clamp-2 text-sm text-slate-600">
                   {m.material}
                 </p>
               )}

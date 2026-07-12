@@ -150,10 +150,10 @@ export default function ClassesPage() {
           hint="Tambahkan kelas untuk sekolah yang sudah terdaftar."
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
           <table className="w-full min-w-[560px] text-sm">
             <thead>
-              <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-500">
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <th className="px-4 py-3">Sekolah</th>
                 <th className="px-4 py-3">Nama Kelas</th>
                 <th className="px-4 py-3">Grade</th>
@@ -163,12 +163,12 @@ export default function ClassesPage() {
             </thead>
             <tbody>
               {filtered.map((c) => (
-                <tr key={c.id} className="border-b border-gray-50">
-                  <td className="px-4 py-3 text-gray-600">
+                <tr key={c.id} className="border-b border-slate-50 transition-colors hover:bg-slate-50/50">
+                  <td className="px-4 py-3 text-slate-600">
                     {c.schools?.name}
                   </td>
                   <td className="px-4 py-3 font-medium">{c.name}</td>
-                  <td className="px-4 py-3 text-gray-500">
+                  <td className="px-4 py-3 text-slate-500">
                     {c.grade_level || '-'}
                   </td>
                   <td className="px-4 py-3">

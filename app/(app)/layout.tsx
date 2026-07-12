@@ -21,10 +21,10 @@ export default async function AppLayout({
     if (!user) redirect('/login');
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-lg font-semibold text-gray-900">
+        <p className="text-lg font-semibold text-slate-900">
           Akun belum aktif
         </p>
-        <p className="max-w-sm text-sm text-gray-500">
+        <p className="max-w-sm text-sm text-slate-500">
           Akunmu belum memiliki profil atau sudah dinonaktifkan. Hubungi admin
           komunitas untuk mengaktifkan.
         </p>

@@ -163,40 +163,40 @@ export default function MeetingDetailPage() {
         }
       />
 
-      <div className="mb-5 grid gap-3 rounded-xl border border-gray-200 bg-white p-4 text-sm sm:grid-cols-2">
+      <div className="mb-5 grid gap-3 rounded-xl border border-slate-200 shadow-sm bg-white p-4 text-sm sm:grid-cols-2">
         <div>
-          <p className="text-xs text-gray-400">Tanggal</p>
+          <p className="text-xs text-slate-400">Tanggal</p>
           <p className="font-medium">{formatDate(meeting.meeting_date)}</p>
         </div>
         <div>
-          <p className="text-xs text-gray-400">Term</p>
+          <p className="text-xs text-slate-400">Term</p>
           <p className="font-medium">
             {meeting.academic_terms ? termLabel(meeting.academic_terms) : '-'}
           </p>
         </div>
         <div>
-          <p className="text-xs text-gray-400">Guru Utama</p>
+          <p className="text-xs text-slate-400">Guru Utama</p>
           <p className="font-medium">
             {meeting.scheduled_teacher?.full_name ?? '-'}
           </p>
         </div>
         <div>
-          <p className="text-xs text-gray-400">Guru Pelaksana</p>
+          <p className="text-xs text-slate-400">Guru Pelaksana</p>
           <p className="font-medium">{meeting.actual_teacher?.full_name}</p>
         </div>
         <div className="sm:col-span-2">
-          <p className="text-xs text-gray-400">Materi</p>
+          <p className="text-xs text-slate-400">Materi</p>
           <p className="whitespace-pre-wrap">{meeting.material || '-'}</p>
         </div>
         {meeting.notes && (
           <div className="sm:col-span-2">
-            <p className="text-xs text-gray-400">Catatan</p>
+            <p className="text-xs text-slate-400">Catatan</p>
             <p className="whitespace-pre-wrap">{meeting.notes}</p>
           </div>
         )}
       </div>
 
-      <h2 className="mb-2 text-sm font-semibold text-gray-700">
+      <h2 className="mb-2 text-sm font-semibold text-slate-700">
         Presensi Siswa
       </h2>
       <AttendanceEditor
@@ -207,7 +207,7 @@ export default function MeetingDetailPage() {
         readOnly={readOnly}
       />
 
-      <h2 className="mb-2 mt-6 text-sm font-semibold text-gray-700">
+      <h2 className="mb-2 mt-6 text-sm font-semibold text-slate-700">
         Dokumentasi (maks. 2 foto)
       </h2>
       <PhotoUploader meetingId={meeting.id} readOnly={readOnly} />

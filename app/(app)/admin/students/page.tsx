@@ -230,10 +230,10 @@ export default function AdminStudentsPage() {
           hint={search ? undefined : 'Tambahkan siswa pertama.'}
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
           <table className="w-full min-w-[560px] text-sm">
             <thead>
-              <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-500">
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <th className="px-4 py-3">Nama</th>
                 <th className="px-4 py-3">NIS</th>
                 <th className="px-4 py-3">Gender</th>
@@ -243,10 +243,10 @@ export default function AdminStudentsPage() {
             </thead>
             <tbody>
               {filtered.map((s) => (
-                <tr key={s.id} className="border-b border-gray-50">
+                <tr key={s.id} className="border-b border-slate-50 transition-colors hover:bg-slate-50/50">
                   <td className="px-4 py-3 font-medium">{s.full_name}</td>
-                  <td className="px-4 py-3 text-gray-500">{s.nis || '-'}</td>
-                  <td className="px-4 py-3 text-gray-500">
+                  <td className="px-4 py-3 text-slate-500">{s.nis || '-'}</td>
+                  <td className="px-4 py-3 text-slate-500">
                     {s.gender || '-'}
                   </td>
                   <td className="px-4 py-3">
@@ -362,7 +362,7 @@ export default function AdminStudentsPage() {
       >
         <form
           onSubmit={addEnrollment}
-          className="mb-5 grid gap-3 rounded-xl bg-gray-50 p-4 sm:grid-cols-4"
+          className="mb-5 grid gap-3 rounded-xl bg-slate-50 p-4 sm:grid-cols-4"
         >
           <Field label="Kelas" required>
             <select
@@ -432,7 +432,7 @@ export default function AdminStudentsPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] text-sm">
               <thead>
-                <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-500">
+                <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                   <th className="px-3 py-2">Kelas</th>
                   <th className="px-3 py-2">Term</th>
                   <th className="px-3 py-2">Mulai</th>
@@ -442,7 +442,7 @@ export default function AdminStudentsPage() {
               </thead>
               <tbody>
                 {enrollments.map((en) => (
-                  <tr key={en.id} className="border-b border-gray-50">
+                  <tr key={en.id} className="border-b border-slate-50 transition-colors hover:bg-slate-50/50">
                     <td className="px-3 py-2">
                       {(en.classes as any)?.schools?.name} —{' '}
                       {en.classes?.name}

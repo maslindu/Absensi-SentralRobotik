@@ -7,9 +7,9 @@ import { PageHeader } from '@/components/ui';
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4">
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
-      <p className="mt-0.5 text-xs text-gray-500">{label}</p>
+    <div className="rounded-xl border border-slate-200 shadow-sm bg-white p-4">
+      <p className="text-2xl font-bold text-slate-900">{value}</p>
+      <p className="mt-0.5 text-xs text-slate-500">{label}</p>
     </div>
   );
 }
@@ -54,7 +54,7 @@ export default async function DashboardPage() {
             </Link>
           }
         />
-        <h2 className="mb-2 text-sm font-semibold text-gray-700">
+        <h2 className="mb-2 text-sm font-semibold text-slate-700">
           Kelas yang kamu ampu
         </h2>
         {assignments && assignments.length > 0 ? (
@@ -62,17 +62,17 @@ export default async function DashboardPage() {
             {assignments.map((a: any) => (
               <div
                 key={a.id}
-                className="rounded-xl border border-gray-200 bg-white p-4"
+                className="rounded-xl border border-slate-200 shadow-sm bg-white p-4"
               >
-                <p className="font-semibold text-gray-900">
+                <p className="font-semibold text-slate-900">
                   Kelas {a.classes?.name}
                 </p>
-                <p className="text-sm text-gray-500">{a.schools?.name}</p>
+                <p className="text-sm text-slate-500">{a.schools?.name}</p>
               </div>
             ))}
           </div>
         ) : (
-          <p className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-8 text-center text-sm text-gray-500">
+          <p className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-500">
             Belum ada penugasan kelas untuk term aktif. Hubungi admin.
           </p>
         )}
@@ -131,7 +131,7 @@ export default async function DashboardPage() {
         </Link>
         <Link
           href="/reports"
-          className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
         >
           Buka Rekap
         </Link>

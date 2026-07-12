@@ -174,10 +174,10 @@ export default function TeachersPage() {
           hint="Tambahkan akun pertama untuk pengajar."
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
           <table className="w-full min-w-[640px] text-sm">
             <thead>
-              <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-500">
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <th className="px-4 py-3">Nama</th>
                 <th className="px-4 py-3">Role</th>
                 <th className="px-4 py-3">No. HP</th>
@@ -187,12 +187,12 @@ export default function TeachersPage() {
             </thead>
             <tbody>
               {users.map((p) => (
-                <tr key={p.id} className="border-b border-gray-50">
+                <tr key={p.id} className="border-b border-slate-50 transition-colors hover:bg-slate-50/50">
                   <td className="px-4 py-3 font-medium">{p.full_name}</td>
-                  <td className="px-4 py-3 capitalize text-gray-600">
+                  <td className="px-4 py-3 capitalize text-slate-600">
                     {p.roles?.name}
                   </td>
-                  <td className="px-4 py-3 text-gray-500">{p.phone || '-'}</td>
+                  <td className="px-4 py-3 text-slate-500">{p.phone || '-'}</td>
                   <td className="px-4 py-3">
                     <ActiveBadge active={p.is_active} />
                   </td>

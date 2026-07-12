@@ -246,10 +246,10 @@ export default function TeacherStudentsPage() {
         />
       ) : (
         <>
-          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
             <table className="w-full min-w-[520px] text-sm">
               <thead>
-                <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-500">
+                <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                   <th className="px-4 py-3">Nama</th>
                   <th className="px-4 py-3">NIS</th>
                   <th className="px-4 py-3">Masuk</th>
@@ -258,14 +258,14 @@ export default function TeacherStudentsPage() {
               </thead>
               <tbody>
                 {activeRoster.map((en) => (
-                  <tr key={en.id} className="border-b border-gray-50">
+                  <tr key={en.id} className="border-b border-slate-50 transition-colors hover:bg-slate-50/50">
                     <td className="px-4 py-3 font-medium">
                       {en.students?.full_name}
                     </td>
-                    <td className="px-4 py-3 text-gray-500">
+                    <td className="px-4 py-3 text-slate-500">
                       {en.students?.nis || '-'}
                     </td>
-                    <td className="px-4 py-3 text-gray-500">
+                    <td className="px-4 py-3 text-slate-500">
                       {formatDateShort(en.start_date)}
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -282,7 +282,7 @@ export default function TeacherStudentsPage() {
                   <tr>
                     <td
                       colSpan={4}
-                      className="px-4 py-6 text-center text-gray-400"
+                      className="px-4 py-6 text-center text-slate-400"
                     >
                       Tidak ada siswa aktif di kelas ini.
                     </td>
@@ -294,18 +294,18 @@ export default function TeacherStudentsPage() {
 
           {pastRoster.length > 0 && (
             <>
-              <h2 className="mb-2 mt-6 text-sm font-semibold text-gray-500">
+              <h2 className="mb-2 mt-6 text-sm font-semibold text-slate-500">
                 Sudah keluar
               </h2>
-              <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white opacity-70">
+              <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white opacity-70">
                 <table className="w-full min-w-[520px] text-sm">
                   <tbody>
                     {pastRoster.map((en) => (
-                      <tr key={en.id} className="border-b border-gray-50">
+                      <tr key={en.id} className="border-b border-slate-50 transition-colors hover:bg-slate-50/50">
                         <td className="px-4 py-3">
                           {en.students?.full_name}
                         </td>
-                        <td className="px-4 py-3 text-gray-500">
+                        <td className="px-4 py-3 text-slate-500">
                           keluar {formatDateShort(en.end_date)}
                         </td>
                       </tr>
@@ -330,7 +330,7 @@ export default function TeacherStudentsPage() {
             className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
               addMode === 'baru'
                 ? 'border-blue-600 bg-blue-50 text-blue-700'
-                : 'border-gray-200 text-gray-600'
+                : 'border-slate-200 shadow-sm text-slate-600'
             }`}
             onClick={() => setAddMode('baru')}
           >
@@ -341,7 +341,7 @@ export default function TeacherStudentsPage() {
             className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
               addMode === 'sudah-ada'
                 ? 'border-blue-600 bg-blue-50 text-blue-700'
-                : 'border-gray-200 text-gray-600'
+                : 'border-slate-200 shadow-sm text-slate-600'
             }`}
             onClick={() => setAddMode('sudah-ada')}
           >

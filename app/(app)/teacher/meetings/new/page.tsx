@@ -198,7 +198,7 @@ export default function NewMeetingPage() {
 
       <form
         onSubmit={save}
-        className="space-y-4 rounded-xl border border-gray-200 bg-white p-5"
+        className="space-y-4 rounded-xl border border-slate-200 shadow-sm bg-white p-5"
       >
         <Field label="Sekolah" required>
           <select
@@ -257,7 +257,7 @@ export default function NewMeetingPage() {
         </div>
 
         {scheduledAssignment && (
-          <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-600">
+          <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
             Guru utama:{' '}
             <span className="font-medium">
               {scheduledAssignment.profiles?.full_name}
@@ -312,7 +312,7 @@ export default function NewMeetingPage() {
           {saving && <Spinner className="h-4 w-4" />}
           Simpan & Lanjut Isi Presensi
         </button>
-        <p className="text-center text-xs text-gray-400">
+        <p className="text-center text-xs text-slate-400">
           Setelah disimpan, presensi semua siswa aktif otomatis terisi
           &quot;hadir&quot; — kamu tinggal mengubah yang tidak hadir.
         </p>

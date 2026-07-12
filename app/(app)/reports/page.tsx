@@ -222,13 +222,13 @@ export default function ReportsPage() {
         />
       ) : (
         <>
-          <h2 className="mb-2 text-sm font-semibold text-gray-700">
+          <h2 className="mb-2 text-sm font-semibold text-slate-700">
             Ringkasan Mengajar Guru
           </h2>
-          <div className="mb-6 overflow-x-auto rounded-xl border border-gray-200 bg-white">
+          <div className="mb-6 overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
-                <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-500">
+                <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                   <th className="px-4 py-3">Pengajar</th>
                   <th className="px-4 py-3">Sekolah</th>
                   <th className="px-4 py-3">Jumlah Pertemuan</th>
@@ -237,11 +237,11 @@ export default function ReportsPage() {
               </thead>
               <tbody>
                 {summary.map((r, i) => (
-                  <tr key={i} className="border-b border-gray-50">
+                  <tr key={i} className="border-b border-slate-50 transition-colors hover:bg-slate-50/50">
                     <td className="px-4 py-3 font-medium">{r.pengajar}</td>
-                    <td className="px-4 py-3 text-gray-600">{r.sekolah}</td>
+                    <td className="px-4 py-3 text-slate-600">{r.sekolah}</td>
                     <td className="px-4 py-3">{r.jumlah}</td>
-                    <td className="px-4 py-3 text-gray-500">
+                    <td className="px-4 py-3 text-slate-500">
                       {r.tanggal
                         .sort()
                         .map((d) => d.slice(8, 10))
@@ -253,7 +253,7 @@ export default function ReportsPage() {
             </table>
           </div>
 
-          <h2 className="mb-2 text-sm font-semibold text-gray-700">
+          <h2 className="mb-2 text-sm font-semibold text-slate-700">
             Presensi Siswa (per kelas)
           </h2>
           <div className="space-y-5">
@@ -262,10 +262,10 @@ export default function ReportsPage() {
                 <p className="mb-1.5 text-sm font-medium text-gray-800">
                   {p.classLabel}
                 </p>
-                <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+                <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-500">
+                      <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                         <th className="px-4 py-2.5">Nama</th>
                         {p.meetingNumbers.map((n) => (
                           <th key={n} className="px-3 py-2.5 text-center">
@@ -276,7 +276,7 @@ export default function ReportsPage() {
                     </thead>
                     <tbody>
                       {p.rows.map((row) => (
-                        <tr key={row.name} className="border-b border-gray-50">
+                        <tr key={row.name} className="border-b border-slate-50 transition-colors hover:bg-slate-50/50">
                           <td className="whitespace-nowrap px-4 py-2">
                             {row.name}
                           </td>

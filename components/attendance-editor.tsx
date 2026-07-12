@@ -233,7 +233,7 @@ export default function AttendanceEditor({
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-slate-500">
           {rows.length} siswa ·{' '}
           {rows.filter((r) => r.status === 'hadir').length} hadir
         </p>
@@ -254,13 +254,13 @@ export default function AttendanceEditor({
           {rows.map((row) => (
             <li
               key={row.id}
-              className="rounded-xl border border-gray-200 bg-white p-3"
+              className="rounded-xl border border-slate-200 bg-white p-3"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-medium text-gray-900">
+                <p className="font-medium text-slate-900">
                   {row.student_name_snapshot}
                   {savingId === row.id && (
-                    <Spinner className="ml-2 inline h-3.5 w-3.5 text-gray-400" />
+                    <Spinner className="ml-2 inline h-3.5 w-3.5 text-slate-400" />
                   )}
                 </p>
                 {!readOnly && (
@@ -282,7 +282,7 @@ export default function AttendanceEditor({
                     className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
                       row.status === st
                         ? STATUS_ACTIVE_CLS[st]
-                        : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                        : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
                     } ${readOnly ? 'cursor-default' : ''}`}
                   >
                     {STATUS_LABEL[st]}
@@ -291,7 +291,7 @@ export default function AttendanceEditor({
               </div>
               {(!readOnly || row.remarks) && (
                 <input
-                  className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:border-blue-500 focus:outline-none disabled:border-transparent disabled:bg-transparent disabled:px-0"
+                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:border-blue-500 focus:outline-none disabled:border-transparent disabled:bg-transparent disabled:px-0"
                   placeholder="Keterangan (opsional)"
                   defaultValue={row.remarks ?? ''}
                   disabled={readOnly}
@@ -315,7 +315,7 @@ export default function AttendanceEditor({
             className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
               addMode === 'baru'
                 ? 'border-blue-600 bg-blue-50 text-blue-700'
-                : 'border-gray-200 text-gray-600'
+                : 'border-slate-200 text-slate-600'
             }`}
             onClick={() => setAddMode('baru')}
           >
@@ -326,7 +326,7 @@ export default function AttendanceEditor({
             className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
               addMode === 'sudah-ada'
                 ? 'border-blue-600 bg-blue-50 text-blue-700'
-                : 'border-gray-200 text-gray-600'
+                : 'border-slate-200 text-slate-600'
             }`}
             onClick={() => setAddMode('sudah-ada')}
           >

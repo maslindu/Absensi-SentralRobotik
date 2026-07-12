@@ -4,15 +4,15 @@ import { ReactNode } from 'react';
 
 // ---------- kelas util konsisten ----------
 export const inputCls =
-  'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100 disabled:text-gray-500';
+  'w-full rounded-xl border border-slate-200 bg-white/70 px-4 py-2.5 text-sm text-slate-900 shadow-sm backdrop-blur-md transition-all placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/15 disabled:bg-slate-50 disabled:text-slate-500';
 export const btnPrimary =
-  'inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed';
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-all hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30 focus:outline-none focus:ring-4 focus:ring-blue-500/20 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50';
 export const btnSecondary =
-  'inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50';
+  'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-4 focus:ring-slate-200/50 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50';
 export const btnDanger =
-  'inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50';
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-red-500/25 transition-all hover:bg-red-700 hover:shadow-lg hover:shadow-red-500/30 focus:outline-none focus:ring-4 focus:ring-red-500/20 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50';
 export const btnSmall =
-  'inline-flex items-center rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50';
+  'inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200 active:scale-[0.97]';
 
 export function Spinner({ className = 'h-5 w-5' }: { className?: string }) {
   return (
@@ -40,7 +40,7 @@ export function Spinner({ className = 'h-5 w-5' }: { className?: string }) {
 
 export function LoadingState({ text = 'Memuat data…' }: { text?: string }) {
   return (
-    <div className="flex items-center justify-center gap-3 py-16 text-gray-500">
+    <div className="flex items-center justify-center gap-3 py-16 text-slate-500">
       <Spinner /> <span className="text-sm">{text}</span>
     </div>
   );
@@ -56,9 +56,9 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-14 text-center">
-      <p className="text-sm font-medium text-gray-700">{title}</p>
-      {hint && <p className="text-xs text-gray-500">{hint}</p>}
+    <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center">
+      <p className="text-sm font-medium text-slate-700">{title}</p>
+      {hint && <p className="text-xs text-slate-500">{hint}</p>}
       {action && <div className="mt-3">{action}</div>}
     </div>
   );
@@ -76,8 +76,8 @@ export function PageHeader({
   return (
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h1 className="text-xl font-bold text-gray-900">{title}</h1>
-        {subtitle && <p className="mt-0.5 text-sm text-gray-500">{subtitle}</p>}
+        <h1 className="text-xl font-bold text-slate-900">{title}</h1>
+        {subtitle && <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -88,7 +88,7 @@ export function ActiveBadge({ active }: { active: boolean }) {
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
+        active ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'
       }`}
     >
       {active ? 'Aktif' : 'Nonaktif'}
@@ -107,7 +107,7 @@ export function AttendanceBadge({ status }: { status: string }) {
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-        attendanceColors[status] ?? 'bg-gray-100 text-gray-600'
+        attendanceColors[status] ?? 'bg-slate-100 text-slate-600'
       }`}
     >
       {status}
@@ -141,10 +141,10 @@ export function Modal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+          <h2 className="text-base font-semibold text-slate-900">{title}</h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
             aria-label="Tutup"
           >
             ✕
@@ -177,7 +177,7 @@ export function ConfirmDialog({
 }) {
   return (
     <Modal open={open} title={title} onClose={onCancel}>
-      <p className="text-sm text-gray-600">{message}</p>
+      <p className="text-sm text-slate-600">{message}</p>
       <div className="mt-5 flex justify-end gap-2">
         <button className={btnSecondary} onClick={onCancel} disabled={loading}>
           Batal
@@ -207,11 +207,11 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-sm font-medium text-gray-700">
+      <span className="mb-1 block text-sm font-medium text-slate-700">
         {label} {required && <span className="text-red-500">*</span>}
       </span>
       {children}
-      {hint && <span className="mt-1 block text-xs text-gray-400">{hint}</span>}
+      {hint && <span className="mt-1 block text-xs text-slate-400">{hint}</span>}
     </label>
   );
 }
