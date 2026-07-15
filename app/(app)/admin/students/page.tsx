@@ -1,6 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { FileSpreadsheet, Loader2, Plus, Upload } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/toast';
 import type {
@@ -63,6 +65,18 @@ export default function AdminStudentsPage() {
     start_date: todayISO(),
   });
   const [toDelete, setToDelete] = useState<Enrollment | null>(null);
+
+  // import excel
+  const [importOpen, setImportOpen] = useState(false);
+  const [importClassId, setImportClassId] = useState('');
+  const [importTermId, setImportTermId] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    added: number;
+    skipped: number;
+    errors: string[];
+  } | null>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -197,21 +211,120 @@ export default function AdminStudentsPage() {
     if (enrollStudent) loadEnrollments(enrollStudent);
   }
 
+  function openImport() {
+    const activeTerm = terms.find((t) => t.is_active);
+    setImportClassId('');
+    setImportTermId(activeTerm?.id ?? '');
+    setImportResult(null);
+    setImportOpen(true);
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!importClassId || !importTermId) {
+      toast('Pilih kelas & semester terlebih dahulu', 'error');
+      return;
+    }
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
+
+      // parse baris → {nama, nis}, lewati header & baris kosong
+      const parsed: { full_name: string; nis: string | null }[] = [];
+      for (const row of rows) {
+        const name = String(row?.[0] ?? '').trim();
+        if (!name) continue;
+        // lewati baris header ("Nama"/"Nama Lengkap")
+        if (/^nama(\s+lengkap)?$/i.test(name)) continue;
+        const nis = String(row?.[1] ?? '').trim();
+        parsed.push({ full_name: name, nis: nis || null });
+      }
+
+      if (parsed.length === 0) {
+        setImportResult({
+          added: 0,
+          skipped: 0,
+          errors: ['File tidak berisi nama siswa. Pastikan kolom A = Nama.'],
+        });
+        return;
+      }
+
+      const errors: string[] = [];
+
+      // buat identitas siswa (batch)
+      const { data: inserted, error: stErr } = await supabase
+        .from('students')
+        .insert(parsed)
+        .select('id, full_name');
+      if (stErr || !inserted) {
+        setImportResult({
+          added: 0,
+          skipped: parsed.length,
+          errors: ['Gagal membuat siswa: ' + (stErr?.message ?? '')],
+        });
+        return;
+      }
+
+      // enroll semua ke kelas + semester terpilih
+      const enrollRows = (inserted as { id: string }[]).map((s) => ({
+        student_id: s.id,
+        class_id: importClassId,
+        term_id: importTermId,
+        start_date: todayISO(),
+      }));
+      const { error: enErr } = await supabase
+        .from('enrollments')
+        .insert(enrollRows);
+      if (enErr) {
+        errors.push(
+          'Siswa dibuat, tetapi sebagian gagal didaftarkan ke kelas: ' +
+            enErr.message
+        );
+      }
+
+      setImportResult({
+        added: inserted.length,
+        skipped: rows.length - parsed.length,
+        errors,
+      });
+      load();
+    } catch (err) {
+      setImportResult({
+        added: 0,
+        skipped: 0,
+        errors: ['Gagal membaca file Excel: ' + (err as Error).message],
+      });
+    } finally {
+      setImporting(false);
+    }
+  }
+
   return (
     <div>
       <PageHeader
         title="Siswa"
         subtitle="Identitas siswa & keanggotaan kelas per semester"
         action={
-          <button
-            className={btnPrimary}
-            onClick={() => {
-              setStudentForm(emptyStudent);
-              setStudentModal(true);
-            }}
-          >
-            + Tambah Siswa
-          </button>
+          <div className="flex gap-2">
+            <button className={btnSecondary} onClick={openImport}>
+              <FileSpreadsheet className="h-4 w-4" /> Import Excel
+            </button>
+            <button
+              className={btnPrimary}
+              onClick={() => {
+                setStudentForm(emptyStudent);
+                setStudentModal(true);
+              }}
+            >
+              <Plus className="h-4 w-4" /> Tambah Siswa
+            </button>
+          </div>
         }
       />
 
@@ -486,6 +599,101 @@ export default function AdminStudentsPage() {
             </table>
           </div>
         )}
+      </Modal>
+
+      {/* Import Excel */}
+      <Modal
+        open={importOpen}
+        title="Import Siswa dari Excel"
+        onClose={() => setImportOpen(false)}
+        wide
+      >
+        <div className="space-y-4">
+          <div className="rounded-xl bg-brand-50 px-4 py-3 text-xs text-brand-800 ring-1 ring-brand-100">
+            <p className="font-semibold">Format file (.xlsx / .xls):</p>
+            <p className="mt-1">
+              Kolom <b>A = Nama Lengkap</b> (wajib), kolom{' '}
+              <b>B = NIS</b> (opsional). Baris pertama boleh berupa judul kolom
+              (mis. &quot;Nama&quot;) — akan otomatis dilewati.
+            </p>
+            <p className="mt-1">
+              Semua siswa akan dibuat lalu langsung didaftarkan ke kelas &amp;
+              semester yang dipilih di bawah.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Kelas tujuan" required>
+              <select
+                className={inputCls}
+                value={importClassId}
+                onChange={(e) => setImportClassId(e.target.value)}
+              >
+                <option value="">— pilih kelas —</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.schools?.name} — {c.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Semester tujuan" required>
+              <select
+                className={inputCls}
+                value={importTermId}
+                onChange={(e) => setImportTermId(e.target.value)}
+              >
+                <option value="">— pilih semester —</option>
+                {terms.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {termLabel(t)}
+                    {t.is_active ? ' (aktif)' : ''}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+
+          <input
+            ref={importFileRef}
+            type="file"
+            accept=".xlsx,.xls"
+            hidden
+            onChange={handleImportFile}
+          />
+          <button
+            type="button"
+            disabled={importing || !importClassId || !importTermId}
+            onClick={() => importFileRef.current?.click()}
+            className={`${btnPrimary} w-full`}
+          >
+            {importing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4" />
+            )}
+            {importing ? 'Mengimpor…' : 'Pilih File Excel & Import'}
+          </button>
+
+          {importResult && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+              <p className="font-semibold text-slate-800">Hasil import</p>
+              <p className="mt-1 text-emerald-700">
+                {importResult.added} siswa ditambahkan &amp; didaftarkan.
+              </p>
+              {importResult.skipped > 0 && (
+                <p className="text-slate-500">
+                  {importResult.skipped} baris dilewati (kosong/judul).
+                </p>
+              )}
+              {importResult.errors.map((er, i) => (
+                <p key={i} className="mt-1 text-red-600">
+                  {er}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
       </Modal>
 
       <ConfirmDialog

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/toast';
 import type { AcademicTerm } from '@/lib/types';
@@ -136,7 +137,7 @@ export default function TermsPage() {
         subtitle="Kelola periode semester & tentukan term aktif"
         action={
           <button className={btnPrimary} onClick={openAdd}>
-            + Tambah
+            <Plus className="h-4 w-4" /> Tambah
           </button>
         }
       />
@@ -149,7 +150,7 @@ export default function TermsPage() {
           hint="Tambahkan tahun ajaran pertama, mis. 2026/2027 Ganjil."
           action={
             <button className={btnPrimary} onClick={openAdd}>
-              + Tambah Tahun Ajaran
+              <Plus className="h-4 w-4" /> Tambah Tahun Ajaran
             </button>
           }
         />

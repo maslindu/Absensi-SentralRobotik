@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSessionInfo } from '@/lib/auth';
 
-// Guru mengelola halamannya; admin boleh masuk untuk membantu;
-// ketua boleh membuka detail pertemuan (read-only, ditegakkan RLS).
+// Guru mengelola halamannya; admin boleh masuk untuk membantu.
 export default async function TeacherLayout({
   children,
 }: {

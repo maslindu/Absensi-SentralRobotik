@@ -1,5 +1,5 @@
 // Tipe data mengikuti docs/schema.sql
-export type RoleName = 'admin' | 'guru' | 'ketua';
+export type RoleName = 'admin' | 'guru';
 export type Semester = 'ganjil' | 'genap';
 export type StudentStatus = 'aktif' | 'nonaktif';
 export type AttendanceStatus = 'hadir' | 'izin' | 'sakit' | 'alpa';

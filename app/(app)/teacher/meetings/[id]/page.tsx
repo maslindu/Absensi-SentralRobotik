@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { Pencil, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/toast';
 import type { Meeting, RoleName } from '@/lib/types';
@@ -90,7 +91,8 @@ export default function MeetingDetailPage() {
     );
   }
 
-  const readOnly = role === 'ketua';
+  // Ketua dihapus; admin & guru pemilik boleh mengedit (dipaksakan RLS).
+  const readOnly = false;
 
   async function saveEdit(e: React.FormEvent) {
     e.preventDefault();
@@ -148,14 +150,14 @@ export default function MeetingDetailPage() {
                   setEditOpen(true);
                 }}
               >
-                ✏️ Edit
+                <Pencil className="h-3.5 w-3.5" /> Edit
               </button>
               {role === 'admin' && (
                 <button
                   className={`${btnSmall} text-red-600`}
                   onClick={() => setDeleteOpen(true)}
                 >
-                  Hapus
+                  <Trash2 className="h-3.5 w-3.5" /> Hapus
                 </button>
               )}
             </div>
@@ -163,7 +165,7 @@ export default function MeetingDetailPage() {
         }
       />
 
-      <div className="mb-5 grid gap-3 rounded-xl border border-slate-200 shadow-sm bg-white p-4 text-sm sm:grid-cols-2">
+      <div className="card mb-5 grid gap-3 p-4 text-sm sm:grid-cols-2">
         <div>
           <p className="text-xs text-slate-400">Tanggal</p>
           <p className="font-medium">{formatDate(meeting.meeting_date)}</p>

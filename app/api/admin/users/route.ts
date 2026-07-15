@@ -19,7 +19,7 @@ async function requireAdmin() {
   return user;
 }
 
-// POST /api/admin/users — buat akun guru/ketua (Auth user + profile)
+// POST /api/admin/users — buat akun guru (Auth user + profile)
 export async function POST(request: Request) {
   const admin = await requireAdmin();
   if (!admin) {
@@ -30,10 +30,12 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => null);
-  const { email, password, full_name, phone, role } = body ?? {};
-  if (!email || !password || !full_name || !['guru', 'ketua'].includes(role)) {
+  const { email, password, full_name, phone } = body ?? {};
+  // Semua akun yang dibuat lewat panel ini adalah guru (role ketua dihapus).
+  const role = 'guru';
+  if (!email || !password || !full_name) {
     return NextResponse.json(
-      { error: 'Data tidak lengkap (email, password, nama, role wajib)' },
+      { error: 'Data tidak lengkap (email, password, nama wajib)' },
       { status: 400 }
     );
   }

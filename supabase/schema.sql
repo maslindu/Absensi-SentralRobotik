@@ -49,7 +49,8 @@ create table if not exists roles (
   id   uuid primary key default gen_random_uuid(),
   name text unique not null
 );
-insert into roles(name) values ('admin'),('guru'),('ketua')
+-- Catatan: role 'ketua' dihapus — fiturnya sudah tercakup di 'admin'.
+insert into roles(name) values ('admin'),('guru')
 on conflict (name) do nothing;
 
 -- =============================================================================

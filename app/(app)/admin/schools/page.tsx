@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/toast';
 import type { School } from '@/lib/types';
@@ -119,7 +120,7 @@ export default function SchoolsPage() {
               setModalOpen(true);
             }}
           >
-            + Tambah
+            <Plus className="h-4 w-4" /> Tambah
           </button>
         }
       />

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { UserMinus, UserPlus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/toast';
 import type { Attendance, AttendanceStatus, Student } from '@/lib/types';
@@ -26,9 +27,9 @@ const STATUS_LABEL: Record<AttendanceStatus, string> = {
 };
 
 const STATUS_ACTIVE_CLS: Record<AttendanceStatus, string> = {
-  hadir: 'bg-green-600 text-white border-green-600',
-  izin: 'bg-yellow-500 text-white border-yellow-500',
-  sakit: 'bg-blue-600 text-white border-blue-600',
+  hadir: 'bg-emerald-600 text-white border-emerald-600',
+  izin: 'bg-amber-500 text-white border-amber-500',
+  sakit: 'bg-sky-600 text-white border-sky-600',
   alpa: 'bg-red-600 text-white border-red-600',
 };
 
@@ -239,7 +240,7 @@ export default function AttendanceEditor({
         </p>
         {!readOnly && (
           <button className={btnSmall} onClick={openAdd}>
-            ➕ Tambah Siswa
+            <UserPlus className="h-3.5 w-3.5" /> Tambah Siswa
           </button>
         )}
       </div>
@@ -265,10 +266,10 @@ export default function AttendanceEditor({
                 </p>
                 {!readOnly && (
                   <button
-                    className="text-xs text-red-500 hover:underline"
+                    className="inline-flex items-center gap-1 text-xs text-red-500 hover:underline"
                     onClick={() => setToRemove(row)}
                   >
-                    ➖ Keluarkan
+                    <UserMinus className="h-3.5 w-3.5" /> Keluarkan
                   </button>
                 )}
               </div>
@@ -291,7 +292,7 @@ export default function AttendanceEditor({
               </div>
               {(!readOnly || row.remarks) && (
                 <input
-                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:border-blue-500 focus:outline-none disabled:border-transparent disabled:bg-transparent disabled:px-0"
+                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:border-brand-500 focus:outline-none disabled:border-transparent disabled:bg-transparent disabled:px-0"
                   placeholder="Keterangan (opsional)"
                   defaultValue={row.remarks ?? ''}
                   disabled={readOnly}
@@ -314,7 +315,7 @@ export default function AttendanceEditor({
             type="button"
             className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
               addMode === 'baru'
-                ? 'border-blue-600 bg-blue-50 text-blue-700'
+                ? 'border-brand-600 bg-brand-50 text-brand-700'
                 : 'border-slate-200 text-slate-600'
             }`}
             onClick={() => setAddMode('baru')}
@@ -325,7 +326,7 @@ export default function AttendanceEditor({
             type="button"
             className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
               addMode === 'sudah-ada'
-                ? 'border-blue-600 bg-blue-50 text-blue-700'
+                ? 'border-brand-600 bg-brand-50 text-brand-700'
                 : 'border-slate-200 text-slate-600'
             }`}
             onClick={() => setAddMode('sudah-ada')}
@@ -371,7 +372,7 @@ export default function AttendanceEditor({
               </select>
             </Field>
           )}
-          <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
+          <p className="rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">
             Siswa akan di-enroll ke kelas ini (mulai {meetingDate}) dan
             langsung muncul di presensi pertemuan ini dengan status hadir.
           </p>

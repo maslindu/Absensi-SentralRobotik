@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Plus, UserMinus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/toast';
 import type {
@@ -215,7 +216,7 @@ export default function TeacherStudentsPage() {
         subtitle={`Kelola siswa kelas yang kamu ampu — ${termLabel(term)}`}
         action={
           <button className={btnPrimary} onClick={openAdd}>
-            + Tambah Siswa
+            <Plus className="h-4 w-4" /> Tambah Siswa
           </button>
         }
       />
@@ -240,7 +241,7 @@ export default function TeacherStudentsPage() {
           hint="Tambahkan siswa — bisa juga langsung dari layar presensi saat pertemuan."
           action={
             <button className={btnPrimary} onClick={openAdd}>
-              + Tambah Siswa
+              <Plus className="h-4 w-4" /> Tambah Siswa
             </button>
           }
         />
@@ -273,7 +274,7 @@ export default function TeacherStudentsPage() {
                         className={btnSmall}
                         onClick={() => setToEnd(en)}
                       >
-                        ➖ Keluarkan
+                        <UserMinus className="h-3.5 w-3.5" /> Keluarkan
                       </button>
                     </td>
                   </tr>
@@ -329,8 +330,8 @@ export default function TeacherStudentsPage() {
             type="button"
             className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
               addMode === 'baru'
-                ? 'border-blue-600 bg-blue-50 text-blue-700'
-                : 'border-slate-200 shadow-sm text-slate-600'
+                ? 'border-brand-600 bg-brand-50 text-brand-700'
+                : 'border-slate-200 text-slate-600'
             }`}
             onClick={() => setAddMode('baru')}
           >
@@ -340,8 +341,8 @@ export default function TeacherStudentsPage() {
             type="button"
             className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
               addMode === 'sudah-ada'
-                ? 'border-blue-600 bg-blue-50 text-blue-700'
-                : 'border-slate-200 shadow-sm text-slate-600'
+                ? 'border-brand-600 bg-brand-50 text-brand-700'
+                : 'border-slate-200 text-slate-600'
             }`}
             onClick={() => setAddMode('sudah-ada')}
           >

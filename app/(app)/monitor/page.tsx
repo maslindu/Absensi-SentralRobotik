@@ -121,7 +121,7 @@ export default function MonitorPage() {
         </select>
         {month && (
           <button
-            className="text-sm text-blue-600 hover:underline"
+            className="text-sm text-brand-600 hover:underline"
             onClick={() => setMonth('')}
           >
             Tampilkan semua bulan
@@ -174,7 +174,7 @@ export default function MonitorPage() {
                   <td className="px-4 py-3 whitespace-nowrap">
                     <Link
                       href={`/teacher/meetings/${m.id}`}
-                      className="font-medium text-blue-600 hover:underline"
+                      className="font-medium text-brand-600 hover:underline"
                     >
                       {formatDateShort(m.meeting_date)}
                     </Link>

@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/toast';
+import { ImagePlus, X } from 'lucide-react';
 import type { MeetingPhoto } from '@/lib/types';
 import { STORAGE_BUCKET } from '@/lib/types';
-import { ConfirmDialog, Spinner, btnSecondary } from '@/components/ui';
+import { ConfirmDialog, Spinner } from '@/components/ui';
 
 interface PhotoWithUrl extends MeetingPhoto {
   url: string | null;
@@ -148,10 +149,10 @@ export default function PhotoUploader({
               {!readOnly && (
                 <button
                   onClick={() => setToDelete(p)}
-                  className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-xs text-white shadow"
+                  className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-white shadow"
                   aria-label="Hapus foto"
                 >
-                  ✕
+                  <X className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
@@ -159,7 +160,7 @@ export default function PhotoUploader({
 
           {!readOnly && photos.length < 2 && (
             <label
-              className={`flex h-32 w-44 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-slate-300 text-slate-400 hover:border-blue-400 hover:text-blue-500 ${
+              className={`flex h-32 w-44 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-400 hover:border-brand-400 hover:text-brand-500 ${
                 uploading ? 'pointer-events-none opacity-50' : ''
               }`}
             >
@@ -167,7 +168,7 @@ export default function PhotoUploader({
                 <Spinner className="h-5 w-5" />
               ) : (
                 <>
-                  <span className="text-2xl">📷</span>
+                  <ImagePlus className="h-6 w-6" />
                   <span className="text-xs font-medium">
                     Tambah Foto ({photos.length}/2)
                   </span>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Bot } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Field, Spinner, btnPrimary, inputCls } from '@/components/ui';
 
@@ -31,17 +32,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 via-slate-50 to-brand-100 px-4">
+      <div className="w-full max-w-sm rounded-3xl bg-white p-8 shadow-xl shadow-brand-900/5 ring-1 ring-slate-200/60">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-2xl">
-            🤖
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/25">
+            <Bot className="h-7 w-7" />
           </div>
-          <h1 className="text-lg font-bold text-slate-900">
-            Presensi Robotik Sentral Robotik
-          </h1>
+          <h1 className="text-lg font-bold text-slate-900">Presensi Robotik</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Masuk untuk mencatat & memantau kegiatan mengajar
+            Sentral Robotik — masuk untuk mencatat &amp; memantau kegiatan
           </p>
         </div>
 

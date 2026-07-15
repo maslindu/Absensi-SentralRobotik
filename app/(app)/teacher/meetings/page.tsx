@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { ImageIcon, Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/toast';
 import type { AcademicTerm, Meeting } from '@/lib/types';
@@ -64,7 +65,7 @@ export default function TeacherMeetingsPage() {
         subtitle="Laporan pertemuan kelas yang kamu ampu"
         action={
           <Link href="/teacher/meetings/new" className={btnPrimary}>
-            + Buat Laporan
+            <Plus className="h-4 w-4" /> Buat Laporan
           </Link>
         }
       />
@@ -101,14 +102,15 @@ export default function TeacherMeetingsPage() {
             <Link
               key={m.id}
               href={`/teacher/meetings/${m.id}`}
-              className="rounded-xl border border-slate-200 shadow-sm bg-white p-4 transition hover:border-blue-300 hover:shadow-sm"
+              className="card p-4 transition hover:border-brand-300 hover:shadow-md"
             >
               <div className="flex items-center justify-between">
-                <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+                <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700">
                   Pertemuan ke-{m.meeting_number}
                 </span>
-                <span className="text-xs text-slate-400">
-                  📷 {m.meeting_photos?.length ?? 0}/2
+                <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  {m.meeting_photos?.length ?? 0}/2
                 </span>
               </div>
               <p className="mt-2 font-semibold text-slate-900">

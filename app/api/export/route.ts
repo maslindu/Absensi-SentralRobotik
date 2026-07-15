@@ -7,7 +7,7 @@ import { STORAGE_BUCKET } from '@/lib/types';
 export const runtime = 'nodejs';
 
 // GET /api/export?month=YYYY-MM[&school_id=...]
-// Membangun file .xlsx rekap bulanan (README §12) — hanya admin & ketua.
+// Membangun file .xlsx rekap bulanan (README §12) — hanya admin.
 export async function GET(request: Request) {
   const supabase = await createClient();
   const {
@@ -22,9 +22,9 @@ export async function GET(request: Request) {
     .eq('id', user.id)
     .single();
   const role = (profile?.roles as any)?.name;
-  if (!profile?.is_active || (role !== 'admin' && role !== 'ketua')) {
+  if (!profile?.is_active || role !== 'admin') {
     return NextResponse.json(
-      { error: 'Hanya admin/ketua yang boleh export' },
+      { error: 'Hanya admin yang boleh export' },
       { status: 403 }
     );
   }

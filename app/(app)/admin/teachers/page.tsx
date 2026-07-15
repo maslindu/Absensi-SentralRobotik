@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/toast';
 import type { Profile } from '@/lib/types';
@@ -24,7 +25,6 @@ interface AddForm {
   email: string;
   password: string;
   phone: string;
-  role: 'guru' | 'ketua';
 }
 
 const emptyAdd: AddForm = {
@@ -32,7 +32,6 @@ const emptyAdd: AddForm = {
   email: '',
   password: '',
   phone: '',
-  role: 'guru',
 };
 
 export default function TeachersPage() {
@@ -56,11 +55,9 @@ export default function TeachersPage() {
       .select('*, roles:role_id(id, name)')
       .order('full_name');
     if (error) toast('Gagal memuat data: ' + error.message, 'error');
-    // tampilkan guru & ketua (akun admin dikelola langsung di Supabase)
+    // tampilkan akun guru (akun admin dikelola langsung di Supabase)
     setUsers(
-      ((data as Profile[]) ?? []).filter(
-        (p) => p.roles?.name === 'guru' || p.roles?.name === 'ketua'
-      )
+      ((data as Profile[]) ?? []).filter((p) => p.roles?.name === 'guru')
     );
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -151,8 +148,8 @@ export default function TeachersPage() {
   return (
     <div>
       <PageHeader
-        title="Guru & Ketua"
-        subtitle="Kelola akun pengajar dan ketua komunitas"
+        title="Guru"
+        subtitle="Kelola akun pengajar komunitas"
         action={
           <button
             className={btnPrimary}
@@ -161,7 +158,7 @@ export default function TeachersPage() {
               setAddOpen(true);
             }}
           >
-            + Tambah Akun
+            <Plus className="h-4 w-4" /> Tambah Guru
           </button>
         }
       />
@@ -170,7 +167,7 @@ export default function TeachersPage() {
         <LoadingState />
       ) : users.length === 0 ? (
         <EmptyState
-          title="Belum ada akun guru/ketua"
+          title="Belum ada akun guru"
           hint="Tambahkan akun pertama untuk pengajar."
         />
       ) : (
@@ -179,7 +176,6 @@ export default function TeachersPage() {
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <th className="px-4 py-3">Nama</th>
-                <th className="px-4 py-3">Role</th>
                 <th className="px-4 py-3">No. HP</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Aksi</th>
@@ -189,9 +185,6 @@ export default function TeachersPage() {
               {users.map((p) => (
                 <tr key={p.id} className="border-b border-slate-50 transition-colors hover:bg-slate-50/50">
                   <td className="px-4 py-3 font-medium">{p.full_name}</td>
-                  <td className="px-4 py-3 capitalize text-slate-600">
-                    {p.roles?.name}
-                  </td>
                   <td className="px-4 py-3 text-slate-500">{p.phone || '-'}</td>
                   <td className="px-4 py-3">
                     <ActiveBadge active={p.is_active} />
@@ -284,21 +277,6 @@ export default function TeachersPage() {
                 setAddForm({ ...addForm, phone: e.target.value })
               }
             />
-          </Field>
-          <Field label="Role" required>
-            <select
-              className={inputCls}
-              value={addForm.role}
-              onChange={(e) =>
-                setAddForm({
-                  ...addForm,
-                  role: e.target.value as 'guru' | 'ketua',
-                })
-              }
-            >
-              <option value="guru">Guru</option>
-              <option value="ketua">Ketua</option>
-            </select>
           </Field>
           <div className="flex justify-end gap-2 pt-2">
             <button
