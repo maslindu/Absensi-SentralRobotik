@@ -1,6 +1,6 @@
 # Ringkasan Sistem — Presensi & Monitoring Pengajar Komunitas Robotik Soloraya
 
-> Dokumen ini ditulis untuk dijelaskan ke klien/stakeholder non-teknis. Isinya menjawab: **masalah apa yang diselesaikan, apa saja isi sistemnya, siapa bisa apa, dan bagaimana alur pemakaiannya sehari-hari.** Detail teknis lengkap ada di `PRD.md`, `README.md`, dan `UI_SPEC.md` di folder yang sama.
+> Dokumen ini ditulis untuk dijelaskan ke klien/stakeholder non-teknis. Isinya menjawab: **masalah apa yang diselesaikan, apa saja isi sistemnya, siapa bisa apa, dan bagaimana alur pemakaiannya sehari-hari.** Detail teknis lengkap ada di `PRD.md` dan `README.md` di folder yang sama.
 
 ---
 
@@ -11,7 +11,7 @@ Komunitas Robotik Soloraya punya beberapa pengajar yang mengajar ekstrakurikuler
 - Tidak ada satu tempat yang menyimpan seluruh data kegiatan mengajar.
 - Sulit mengetahui siapa guru yang benar-benar mengajar saat terjadi pergantian mendadak.
 - Presensi siswa mudah tercecer, apalagi kalau ada siswa yang masuk/keluar di tengah semester.
-- Rekap bulanan untuk ketua komunitas dikerjakan manual dan rawan salah ketik/salah hitung.
+- Rekap bulanan untuk pengurus komunitas dikerjakan manual dan rawan salah ketik/salah hitung.
 
 **Sistem ini dibuat sebagai satu aplikasi web terpusat** yang bisa dipakai lewat HP maupun laptop untuk mencatat semua itu secara otomatis dan rapi.
 
@@ -19,7 +19,7 @@ Komunitas Robotik Soloraya punya beberapa pengajar yang mengajar ekstrakurikuler
 
 ## 2. Apa Saja yang Bisa Dilakukan Sistem Ini (Fitur Utama)
 
-1. **Login sesuai peran** — Admin, Guru, dan Ketua Komunitas masing-masing punya tampilan dan hak akses berbeda.
+1. **Login sesuai peran** — Admin dan Guru masing-masing punya tampilan dan hak akses berbeda.
 2. **Data master** — kelola daftar sekolah, kelas, guru, dan siswa dari satu tempat.
 3. **Tahun ajaran & semester** — sistem tahu semester mana yang sedang aktif; nomor pertemuan otomatis reset tiap ganti semester.
 4. **Penugasan guru** — menentukan guru utama untuk tiap kelas per semester.
@@ -27,18 +27,19 @@ Komunitas Robotik Soloraya punya beberapa pengajar yang mengajar ekstrakurikuler
 6. **Presensi siswa otomatis** — begitu laporan pertemuan dibuat, semua siswa aktif di kelas itu otomatis tercatat **"hadir"**; guru tinggal mengubah siswa yang izin/sakit/alpa. Guru tidak perlu mengetik ulang daftar siswa setiap kali.
 7. **Kelola siswa langsung di lapangan** — guru bisa menambah siswa baru atau menandai siswa keluar langsung dari layar presensi, tanpa menunggu admin. Riwayat presensi siswa lama tetap tersimpan.
 8. **Dokumentasi foto** — tiap laporan bisa dilampiri 1–2 foto kegiatan, disimpan aman (tidak bisa diakses sembarang orang).
-9. **Monitoring untuk ketua komunitas** — ketua bisa melihat seluruh laporan dari semua guru/sekolah, memfilter berdasarkan bulan/sekolah/guru, tanpa bisa mengubah data (khusus lihat saja).
+9. **Monitoring untuk admin** — admin bisa melihat seluruh laporan dari semua guru/sekolah, memfilter berdasarkan bulan/sekolah/guru, tanpa perlu mengubah data guru (khusus lihat saja).
 10. **Rekap & export bulanan** — laporan bulanan (rekap mengajar tiap guru + presensi siswa + materi + dokumentasi) bisa diunduh sebagai file **Excel (.xlsx)** dalam hitungan detik.
 
 ---
 
 ## 3. Siapa Bisa Apa (Peran Pengguna)
 
+Sistem ini punya **2 peran pengguna**: Admin dan Guru.
+
 | Peran | Untuk siapa | Bisa melakukan |
 |---|---|---|
-| **Admin** | Pengurus komunitas | Mengatur semua data dasar: sekolah, kelas, guru, siswa, penugasan guru, tahun ajaran. Punya kontrol penuh atas seluruh data. |
+| **Admin** | Pengurus komunitas (termasuk ketua) | Mengatur semua data dasar: sekolah, kelas, guru, siswa, penugasan guru, tahun ajaran. Juga bisa memantau seluruh laporan & rekap dari semua guru/sekolah, serta mengunduh export bulanan. Punya kontrol penuh atas seluruh data. |
 | **Guru/Pengajar** | Pengajar robotik di lapangan | Login dan hanya melihat kelas yang menjadi tanggung jawabnya. Membuat laporan pertemuan, mengisi presensi, upload foto, serta menambah/mengeluarkan siswa **khusus di kelasnya sendiri**. |
-| **Ketua Komunitas** | Pemantau/pengawas program | Melihat seluruh laporan dan rekap dari semua guru & sekolah, memfilter datanya, tapi **tidak bisa mengubah apa pun** (hanya memantau). |
 
 Pembatasan ini bukan cuma tampilan di layar — sudah ditegakkan di level database, jadi walaupun ada yang mencoba "mengakali" lewat cara teknis, sistem tetap menolak akses yang tidak sesuai perannya.
 
@@ -56,7 +57,7 @@ Pembatasan ini bukan cuma tampilan di layar — sudah ditegakkan di level databa
 7. Unggah 1–2 foto dokumentasi kegiatan.
 8. Simpan — laporan selesai, biasanya kurang dari 3 menit.
 
-**Ketua komunitas ingin memantau:**
+**Admin/pengurus ingin memantau:**
 1. Login → buka halaman monitoring.
 2. Filter berdasarkan bulan, sekolah, atau guru tertentu.
 3. Lihat detail laporan, presensi, dan foto dokumentasi kapan saja tanpa perlu meminta data ke guru.
@@ -73,7 +74,7 @@ Pembatasan ini bukan cuma tampilan di layar — sudah ditegakkan di level databa
 ## 5. Yang Sudah Termasuk vs Belum (Cakupan Saat Ini)
 
 **Sudah termasuk (rilis saat ini/MVP):**
-Login & hak akses per peran, kelola data sekolah/kelas/guru/siswa, tahun ajaran & semester, penugasan guru, laporan pertemuan dengan nomor otomatis, pencatatan guru pengganti, presensi otomatis, kelola siswa langsung oleh guru, upload dokumentasi foto, monitoring oleh ketua, dan export rekap bulanan ke Excel.
+Login & hak akses per peran, kelola data sekolah/kelas/guru/siswa, tahun ajaran & semester, penugasan guru, laporan pertemuan dengan nomor otomatis, pencatatan guru pengganti, presensi otomatis, kelola siswa langsung oleh guru, upload dokumentasi foto, monitoring oleh admin, dan export rekap bulanan ke Excel.
 
 **Belum termasuk (rencana pengembangan lanjutan, di luar rilis saat ini):**
 - Penjadwalan mengajar otomatis & deteksi "pertemuan yang seharusnya ada tapi bolong".
@@ -99,5 +100,5 @@ Login & hak akses per peran, kelola data sekolah/kelas/guru/siswa, tahun ajaran 
 
 ## 7. Ringkasan untuk Disampaikan ke Klien
 
-> "Sistem ini menggantikan pencatatan manual kegiatan mengajar robotik dengan satu aplikasi web yang bisa diisi guru dari HP dalam hitungan menit. Setiap laporan otomatis mencatat presensi siswa, materi, dan foto dokumentasi. Ketua komunitas bisa memantau seluruh kegiatan dari semua sekolah kapan saja, dan rekap bulanan bisa diunduh sebagai file Excel tanpa perlu menyusun manual lagi. Data siswa yang keluar-masuk di tengah semester tetap tercatat rapi tanpa merusak riwayat presensi lama."
+> "Sistem ini menggantikan pencatatan manual kegiatan mengajar robotik dengan satu aplikasi web yang bisa diisi guru dari HP dalam hitungan menit. Setiap laporan otomatis mencatat presensi siswa, materi, dan foto dokumentasi. Admin/pengurus bisa memantau seluruh kegiatan dari semua sekolah kapan saja, dan rekap bulanan bisa diunduh sebagai file Excel tanpa perlu menyusun manual lagi. Data siswa yang keluar-masuk di tengah semester tetap tercatat rapi tanpa merusak riwayat presensi lama."
 
