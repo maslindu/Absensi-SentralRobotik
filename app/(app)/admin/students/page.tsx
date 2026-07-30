@@ -88,6 +88,12 @@ export default function AdminStudentsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  // verifikasi kedua untuk siswa yang punya histori presensi
+  const [bulkForceOpen, setBulkForceOpen] = useState(false);
+  const [blockedStudents, setBlockedStudents] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const [forceDeleting, setForceDeleting] = useState(false);
 
   // panel enrollment
   const [enrollStudent, setEnrollStudent] = useState<Student | null>(null);
@@ -280,7 +286,7 @@ export default function AdminStudentsPage() {
     if (ids.length === 0) return;
     setBulkDeleting(true);
     try {
-      // Siswa dengan histori presensi tidak boleh dihapus (jaga rekap lama).
+      // Cek siswa mana yang punya histori presensi.
       const { data: att, error: attErr } = await supabase
         .from('attendance')
         .select('student_id')
@@ -289,48 +295,99 @@ export default function AdminStudentsPage() {
         toast('Gagal memeriksa histori presensi: ' + attErr.message, 'error');
         return;
       }
-      const blocked = new Set((att ?? []).map((a) => a.student_id as string));
-      const deletable = ids.filter((id) => !blocked.has(id));
+      const blockedSet = new Set(
+        (att ?? []).map((a) => a.student_id as string)
+      );
+      const deletable = ids.filter((id) => !blockedSet.has(id));
+      const nameOf = (id: string) =>
+        students.find((s) => s.id === id)?.full_name ?? 'Siswa';
 
-      if (deletable.length === 0) {
-        toast(
-          'Semua siswa terpilih punya histori presensi — tidak bisa dihapus.',
-          'error'
-        );
-        return;
+      // Hapus dulu siswa tanpa histori (aman) — 1 konfirmasi sudah cukup.
+      if (deletable.length > 0) {
+        const { error: enErr } = await supabase
+          .from('enrollments')
+          .delete()
+          .in('student_id', deletable);
+        if (enErr) {
+          toast('Gagal menghapus enrollment siswa: ' + enErr.message, 'error');
+          return;
+        }
+        const { error: stErr } = await supabase
+          .from('students')
+          .delete()
+          .in('id', deletable);
+        if (stErr) {
+          toast('Gagal menghapus siswa: ' + stErr.message, 'error');
+          return;
+        }
       }
 
-      // Bersihkan enrollment dulu (FK on delete restrict), lalu hapus siswa.
+      setBulkOpen(false);
+
+      if (blockedSet.size > 0) {
+        // Siswa berhistori presensi -> minta verifikasi kedua yang tegas.
+        setBlockedStudents(
+          [...blockedSet].map((id) => ({ id, name: nameOf(id) }))
+        );
+        setSelectedIds(new Set([...blockedSet]));
+        if (deletable.length > 0) {
+          toast(
+            `${deletable.length} siswa dihapus. ${blockedSet.size} lainnya punya histori presensi — perlu konfirmasi.`
+          );
+        }
+        setBulkForceOpen(true);
+        refresh();
+      } else {
+        toast(`${deletable.length} siswa dihapus`);
+        exitSelectMode();
+        refresh();
+      }
+    } finally {
+      setBulkDeleting(false);
+    }
+  }
+
+  // Verifikasi kedua: hapus paksa siswa berhistori presensi (ikut hapus presensi).
+  async function forceDelete() {
+    const ids = blockedStudents.map((b) => b.id);
+    if (ids.length === 0) {
+      setBulkForceOpen(false);
+      return;
+    }
+    setForceDeleting(true);
+    try {
+      // Urutan wajib: presensi -> enrollment -> siswa (FK on delete restrict).
+      const { error: atErr } = await supabase
+        .from('attendance')
+        .delete()
+        .in('student_id', ids);
+      if (atErr) {
+        toast('Gagal menghapus histori presensi: ' + atErr.message, 'error');
+        return;
+      }
       const { error: enErr } = await supabase
         .from('enrollments')
         .delete()
-        .in('student_id', deletable);
+        .in('student_id', ids);
       if (enErr) {
-        toast('Gagal menghapus enrollment siswa: ' + enErr.message, 'error');
+        toast('Gagal menghapus enrollment: ' + enErr.message, 'error');
         return;
       }
       const { error: stErr } = await supabase
         .from('students')
         .delete()
-        .in('id', deletable);
+        .in('id', ids);
       if (stErr) {
         toast('Gagal menghapus siswa: ' + stErr.message, 'error');
         return;
       }
-
-      const skipped = blocked.size;
-      toast(
-        `${deletable.length} siswa dihapus` +
-          (skipped > 0
-            ? ` — ${skipped} dilewati (punya histori presensi)`
-            : ''),
-        skipped > 0 ? 'error' : 'success'
-      );
-      setBulkOpen(false);
+      toast(`${ids.length} siswa beserta histori presensinya dihapus permanen`);
+      setBulkForceOpen(false);
+      setBlockedStudents([]);
       exitSelectMode();
       refresh();
     } finally {
-      setBulkDeleting(false);
+      setForceDeleting(false);
     }
   }
 
@@ -1059,16 +1116,41 @@ export default function AdminStudentsPage() {
         </div>
       </Modal>
 
-      {/* Konfirmasi hapus massal */}
+      {/* Konfirmasi hapus massal (langkah 1) */}
       <ConfirmDialog
         open={bulkOpen}
         title={`Hapus ${selectedIds.size} siswa?`}
-        message="Siswa yang belum punya histori presensi akan dihapus permanen beserta keanggotaan kelasnya. Siswa yang sudah punya presensi akan dilewati agar rekap lama tetap utuh."
-        confirmLabel="Hapus permanen"
+        message="Siswa yang belum punya histori presensi akan dihapus permanen beserta keanggotaan kelasnya. Untuk siswa yang sudah punya histori presensi, kamu akan diminta konfirmasi sekali lagi sebelum dihapus."
+        confirmLabel="Lanjut hapus"
         danger
         loading={bulkDeleting}
         onConfirm={bulkDelete}
         onCancel={() => setBulkOpen(false)}
+      />
+
+      {/* Verifikasi kedua: siswa berhistori presensi (langkah 2) */}
+      <ConfirmDialog
+        open={bulkForceOpen}
+        title={`${blockedStudents.length} siswa punya histori presensi`}
+        message={
+          `${
+            blockedStudents.length <= 5
+              ? blockedStudents.map((b) => b.name).join(', ')
+              : blockedStudents
+                  .slice(0, 5)
+                  .map((b) => b.name)
+                  .join(', ') + `, dan ${blockedStudents.length - 5} lainnya`
+          } pernah tercatat dalam presensi. Menghapus permanen akan IKUT MENGHAPUS seluruh catatan presensinya dan tidak dapat dikembalikan. Tetap hapus?`
+        }
+        confirmLabel="Ya, hapus beserta presensi"
+        danger
+        loading={forceDeleting}
+        onConfirm={forceDelete}
+        onCancel={() => {
+          setBulkForceOpen(false);
+          setBlockedStudents([]);
+          exitSelectMode();
+        }}
       />
 
       <ConfirmDialog
