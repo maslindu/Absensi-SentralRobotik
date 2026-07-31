@@ -93,6 +93,45 @@ export async function POST(request: Request) {
   return NextResponse.json({ id: created.user.id });
 }
 
+// DELETE /api/admin/users — hapus akun guru permanen (Auth user; profile ikut
+// terhapus lewat cascade). Diblokir jika guru punya riwayat mengajar (FK restrict).
+export async function DELETE(request: Request) {
+  const admin = await requireAdmin();
+  if (!admin) {
+    return NextResponse.json(
+      { error: 'Hanya admin yang boleh menghapus akun' },
+      { status: 403 }
+    );
+  }
+
+  const body = await request.json().catch(() => null);
+  const { user_id } = body ?? {};
+  if (!user_id) {
+    return NextResponse.json({ error: 'user_id wajib' }, { status: 400 });
+  }
+  if (user_id === admin.id) {
+    return NextResponse.json(
+      { error: 'Tidak bisa menghapus akun sendiri' },
+      { status: 400 }
+    );
+  }
+
+  const supabaseAdmin = createAdminClient();
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(user_id);
+  if (error) {
+    const blocked = /foreign key|violates|restrict/i.test(error.message);
+    return NextResponse.json(
+      {
+        error: blocked
+          ? 'Guru ini punya riwayat mengajar (pertemuan) sehingga tidak bisa dihapus permanen. Gunakan Nonaktifkan.'
+          : error.message,
+      },
+      { status: blocked ? 409 : 500 }
+    );
+  }
+  return NextResponse.json({ ok: true });
+}
+
 // PATCH /api/admin/users — reset password user
 export async function PATCH(request: Request) {
   const admin = await requireAdmin();

@@ -47,6 +47,7 @@ export default function TeachersPage() {
   const [resetPassword, setResetPassword] = useState('');
   const [saving, setSaving] = useState(false);
   const [toDeactivate, setToDeactivate] = useState<Profile | null>(null);
+  const [toDelete, setToDelete] = useState<Profile | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -129,6 +130,24 @@ export default function TeachersPage() {
     toast('Password berhasil direset');
     setResetTarget(null);
     setResetPassword('');
+  }
+
+  async function deleteUser(p: Profile) {
+    setSaving(true);
+    const res = await fetch('/api/admin/users', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: p.id }),
+    });
+    const json = await res.json();
+    setSaving(false);
+    setToDelete(null);
+    if (!res.ok) {
+      toast(json.error ?? 'Gagal menghapus akun', 'error');
+      return;
+    }
+    toast('Akun guru dihapus permanen');
+    load();
   }
 
   async function toggleActive(p: Profile) {
@@ -219,6 +238,12 @@ export default function TeachersPage() {
                         }
                       >
                         {p.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                      </button>
+                      <button
+                        className={`${btnSmall} text-red-600`}
+                        onClick={() => setToDelete(p)}
+                      >
+                        Hapus
                       </button>
                     </div>
                   </td>
@@ -374,6 +399,17 @@ export default function TeachersPage() {
         danger
         onConfirm={() => toDeactivate && toggleActive(toDeactivate)}
         onCancel={() => setToDeactivate(null)}
+      />
+
+      <ConfirmDialog
+        open={!!toDelete}
+        title={`Hapus akun "${toDelete?.full_name}"?`}
+        message="Akun guru ini akan dihapus permanen beserta login-nya dan tidak bisa dikembalikan. Jika guru sudah punya riwayat mengajar (pertemuan), hapus akan ditolak — gunakan Nonaktifkan agar histori tetap utuh."
+        confirmLabel="Hapus permanen"
+        danger
+        loading={saving}
+        onConfirm={() => toDelete && deleteUser(toDelete)}
+        onCancel={() => setToDelete(null)}
       />
     </div>
   );
