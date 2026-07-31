@@ -45,6 +45,8 @@ export default function SchoolsPage() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [toDeactivate, setToDeactivate] = useState<School | null>(null);
+  const [toDelete, setToDelete] = useState<School | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -90,6 +92,19 @@ export default function SchoolsPage() {
     }
     toast('Sekolah tersimpan');
     setModalOpen(false);
+    load();
+  }
+
+  async function deleteSchool(s: School) {
+    setDeleting(true);
+    const { error } = await supabase.from('schools').delete().eq('id', s.id);
+    setDeleting(false);
+    setToDelete(null);
+    if (error) {
+      toast('Gagal menghapus sekolah: ' + error.message, 'error');
+      return;
+    }
+    toast('Sekolah dihapus permanen');
     load();
   }
 
@@ -193,6 +208,12 @@ export default function SchoolsPage() {
                       >
                         {s.is_active ? 'Nonaktifkan' : 'Aktifkan'}
                       </button>
+                      <button
+                        className={`${btnSmall} text-red-600`}
+                        onClick={() => setToDelete(s)}
+                      >
+                        Hapus
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -256,6 +277,17 @@ export default function SchoolsPage() {
         danger
         onConfirm={() => toDeactivate && toggleActive(toDeactivate)}
         onCancel={() => setToDeactivate(null)}
+      />
+
+      <ConfirmDialog
+        open={!!toDelete}
+        title={`Hapus sekolah "${toDelete?.name}"?`}
+        message="Menghapus sekolah akan IKUT MENGHAPUS permanen semua kelas, penugasan guru, pertemuan, dan presensi di bawahnya. Tindakan ini tidak bisa dikembalikan. Kalau sekolah pernah dipakai untuk data nyata, sebaiknya Nonaktifkan saja."
+        confirmLabel="Hapus permanen"
+        danger
+        loading={deleting}
+        onConfirm={() => toDelete && deleteSchool(toDelete)}
+        onCancel={() => setToDelete(null)}
       />
     </div>
   );
