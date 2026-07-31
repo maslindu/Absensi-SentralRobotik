@@ -19,14 +19,40 @@ export function formatDateShort(dateStr: string | null | undefined): string {
   });
 }
 
+// Zona waktu acuan aplikasi. Dipakai agar "hari ini" sama baik dihitung di
+// browser guru maupun di server (Vercel/Node biasanya berjalan pada UTC).
+export const APP_TIME_ZONE = 'Asia/Jakarta';
+
 export function todayISO(): string {
-  const now = new Date();
-  const tz = now.getTimezoneOffset() * 60000;
-  return new Date(now.getTime() - tz).toISOString().slice(0, 10);
+  // en-CA menghasilkan format YYYY-MM-DD
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: APP_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
 }
 
 export function currentMonthISO(): string {
   return todayISO().slice(0, 7); // 'YYYY-MM'
+}
+
+/**
+ * Rentang tanggal satu bulan untuk filter `meeting_date`:
+ * `start` inklusif, `end` eksklusif (tanggal 1 bulan berikutnya).
+ *
+ * Dihitung murni dari string — JANGAN pakai `new Date(...).toISOString()`
+ * karena konversi ke UTC menggeser tanggal 1 hari di zona waktu +7,
+ * sehingga pertemuan di hari terakhir bulan ikut terpotong.
+ */
+export function monthRange(month: string): { start: string; end: string } {
+  const [year, mon] = month.split('-').map(Number);
+  const nextYear = mon === 12 ? year + 1 : year;
+  const nextMon = mon === 12 ? 1 : mon + 1;
+  return {
+    start: `${month}-01`,
+    end: `${nextYear}-${String(nextMon).padStart(2, '0')}-01`,
+  };
 }
 
 export function termLabel(t: {

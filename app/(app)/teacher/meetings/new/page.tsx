@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { backdateEnrollments } from '@/lib/enrollment';
 import type {
   AcademicTerm,
   AttendanceStatus,
@@ -189,25 +190,30 @@ export default function NewMeetingPage() {
     let cancelled = false;
     setLoadingStudents(true);
     (async () => {
-      // preview nomor pertemuan (tampilan saja; nilai final dari trigger server)
-      const { data: last } = await supabase
+      // Preview nomor pertemuan. Nomor urut MENGIKUTI TANGGAL, jadi laporan
+      // yang diisi terlambat (backdate) menyelip di posisi kronologisnya dan
+      // pertemuan setelahnya dinomori ulang oleh trigger server.
+      const { data: existing } = await supabase
         .from('meetings')
-        .select('meeting_number')
+        .select('meeting_date')
         .eq('class_id', classId)
-        .eq('term_id', term.id)
-        .order('meeting_number', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (!cancelled) setPreviewNumber((last?.meeting_number ?? 0) + 1);
+        .eq('term_id', term.id);
+      if (!cancelled) {
+        const before = ((existing as { meeting_date: string }[]) ?? []).filter(
+          (m) => m.meeting_date <= meetingDate
+        ).length;
+        setPreviewNumber(before + 1);
+      }
 
-      // siswa aktif yang ter-enroll pada tanggal pertemuan (mirror trigger seed)
+      // Roster kelas pada tanggal pertemuan. Yang menentukan hanya "sudah
+      // keluar atau belum" (end_date) — start_date TIDAK dipakai memfilter,
+      // karena siswa sering baru didaftarkan setelah pertemuannya berlangsung.
       const { data } = await supabase
         .from('enrollments')
         .select('students:student_id(id, full_name, nis, status)')
         .eq('class_id', classId)
         .eq('term_id', term.id)
         .eq('is_active', true)
-        .lte('start_date', meetingDate)
         .or(`end_date.is.null,end_date.gte.${meetingDate}`);
       if (cancelled) return;
       const list = ((data as any[]) ?? [])
@@ -249,6 +255,16 @@ export default function NewMeetingPage() {
       term_id: term.id,
       start_date: meetingDate,
     });
+    // sudah pernah ter-enroll (23505): cukup pastikan tanggal mulainya mencakup
+    // tanggal pertemuan ini
+    if (enErr?.code === '23505') {
+      await backdateEnrollments(supabase, {
+        studentIds: [(st as Student).id],
+        classId,
+        termId: term.id,
+        date: meetingDate,
+      });
+    }
     setAddingStudent(false);
     if (enErr && enErr.code !== '23505') {
       setError(
@@ -311,6 +327,16 @@ export default function NewMeetingPage() {
     setSaving(true);
     setError(null);
     setPhotoWarning(null);
+
+    // 0) tarik tanggal mulai enrollment ke belakang bila laporan dibuat untuk
+    //    tanggal sebelum siswa didaftarkan — harus sebelum insert meeting agar
+    //    trigger seed presensi melihat data yang sudah benar.
+    await backdateEnrollments(supabase, {
+      studentIds: students.map((s) => s.id),
+      classId,
+      termId: term.id,
+      date: meetingDate,
+    });
 
     // 1) insert meeting (tanpa meeting_number — trigger server yang mengisi,
     //    sekaligus seed baris presensi 'hadir' untuk siswa ter-enroll)
@@ -526,6 +552,14 @@ export default function NewMeetingPage() {
                 </div>
               </div>
             </div>
+            {classId && meetingDate < todayISO() && (
+              <p className="rounded-xl bg-sky-50 px-3.5 py-2.5 text-xs text-sky-800 ring-1 ring-sky-200">
+                Kamu mengisi laporan untuk tanggal lampau. Nomor pertemuan
+                mengikuti urutan tanggal, jadi laporan ini masuk sebagai
+                pertemuan ke-{previewNumber} dan pertemuan yang tanggalnya
+                lebih baru otomatis bergeser nomornya.
+              </p>
+            )}
           </div>
         </section>
 

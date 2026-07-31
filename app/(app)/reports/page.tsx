@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/toast';
 import type { School } from '@/lib/types';
-import { currentMonthISO } from '@/lib/format';
+import { currentMonthISO, monthRange } from '@/lib/format';
 import {
   AttendanceBadge,
   EmptyState,
@@ -54,10 +54,7 @@ export default function ReportsPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const start = `${month}-01`;
-    const next = new Date(`${start}T00:00:00`);
-    next.setMonth(next.getMonth() + 1);
-    const end = next.toISOString().slice(0, 10);
+    const { start, end } = monthRange(month);
 
     let q = supabase
       .from('meetings')

@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { STORAGE_BUCKET } from '@/lib/types';
+import { monthRange } from '@/lib/format';
 
 export const runtime = 'nodejs';
 
@@ -39,10 +40,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const start = `${month}-01`;
-  const nextDate = new Date(`${start}T00:00:00Z`);
-  nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
-  const end = nextDate.toISOString().slice(0, 10);
+  const { start, end } = monthRange(month);
 
   const admin = createAdminClient();
 

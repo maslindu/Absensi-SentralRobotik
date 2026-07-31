@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { UserMinus, UserPlus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { backdateEnrollments } from '@/lib/enrollment';
 import { useToast } from '@/components/toast';
 import type { Attendance, AttendanceStatus, Student } from '@/lib/types';
 import { ATTENDANCE_STATUSES } from '@/lib/types';
@@ -168,7 +169,16 @@ export default function AttendanceEditor({
         term_id: termId,
         start_date: meetingDate,
       });
-      // 23505 = sudah ter-enroll di kelas+term ini — tidak apa-apa, lanjut
+      // 23505 = sudah ter-enroll di kelas+term ini — pastikan tanggal mulainya
+      // mencakup tanggal pertemuan (mis. laporan backdate), lalu lanjut
+      if (enrollErr?.code === '23505') {
+        await backdateEnrollments(supabase, {
+          studentIds: [studentId],
+          classId,
+          termId,
+          date: meetingDate,
+        });
+      }
       if (enrollErr && enrollErr.code !== '23505') {
         toast(
           enrollErr.message.includes('row-level security')

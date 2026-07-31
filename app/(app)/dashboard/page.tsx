@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { getActiveTerm, getSessionInfo } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { termLabel, currentMonthISO } from '@/lib/format';
+import { termLabel, currentMonthISO, monthRange } from '@/lib/format';
 import { PageHeader, btnPrimary, btnSecondary } from '@/components/ui';
 
 function StatCard({
@@ -41,10 +41,7 @@ export default async function DashboardPage() {
   const term = await getActiveTerm();
 
   const month = currentMonthISO();
-  const monthStart = `${month}-01`;
-  const nextMonth = new Date(`${monthStart}T00:00:00`);
-  nextMonth.setMonth(nextMonth.getMonth() + 1);
-  const monthEnd = nextMonth.toISOString().slice(0, 10);
+  const { start: monthStart, end: monthEnd } = monthRange(month);
 
   if (session.role === 'guru') {
     const { data: assignments } = term

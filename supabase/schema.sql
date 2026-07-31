@@ -249,6 +249,72 @@ drop trigger if exists trg_meeting_number on meetings;
 create trigger trg_meeting_number before insert on meetings
 for each row execute function set_meeting_number();
 
+-- ---- Penomoran ulang kronologis (nomor mengikuti meeting_date) ---------------
+--  Guru boleh mengisi laporan yang terlewat (backdate). Laporan itu menyelip di
+--  posisi tanggalnya dan pertemuan sesudahnya bergeser nomornya. Nomor sementara
+--  dibuat negatif dulu agar tidak menabrak unique (class_id, term_id, number).
+create or replace function renumber_class_meetings()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  v_class uuid;
+  v_term  uuid;
+begin
+  if tg_op = 'DELETE' then
+    v_class := old.class_id;
+    v_term  := old.term_id;
+  else
+    v_class := new.class_id;
+    v_term  := new.term_id;
+  end if;
+
+  perform pg_advisory_xact_lock(hashtext(v_class::text || ':' || v_term::text));
+
+  if not exists (
+    select 1 from (
+      select meeting_number,
+             row_number() over (order by meeting_date, created_at, id) as rn
+        from meetings
+       where class_id = v_class and term_id = v_term
+    ) x
+    where x.meeting_number is distinct from x.rn::integer
+  ) then
+    return null;
+  end if;
+
+  update meetings m
+     set meeting_number = -x.rn
+    from (
+      select id, row_number() over (order by meeting_date, created_at, id) as rn
+        from meetings
+       where class_id = v_class and term_id = v_term
+    ) x
+   where m.id = x.id
+     and m.meeting_number is distinct from x.rn::integer;
+
+  update meetings
+     set meeting_number = -meeting_number
+   where class_id = v_class
+     and term_id = v_term
+     and meeting_number < 0;
+
+  return null;
+end;
+$$;
+
+drop trigger if exists trg_renumber_meetings_ins on meetings;
+create trigger trg_renumber_meetings_ins after insert on meetings
+for each row execute function renumber_class_meetings();
+
+-- hanya saat tanggal berubah; fungsi ini sendiri cuma mengubah meeting_number
+-- sehingga tidak memicu dirinya (tidak ada rekursi)
+drop trigger if exists trg_renumber_meetings_upd on meetings;
+create trigger trg_renumber_meetings_upd after update of meeting_date on meetings
+for each row execute function renumber_class_meetings();
+
+drop trigger if exists trg_renumber_meetings_del on meetings;
+create trigger trg_renumber_meetings_del after delete on meetings
+for each row execute function renumber_class_meetings();
+
 -- =============================================================================
 -- MEETING PHOTOS  (dokumentasi; simpan PATH storage, maksimum 2 foto)
 -- =============================================================================
@@ -300,6 +366,9 @@ for each row execute function set_updated_at();
 -- ---- Auto-generate baris presensi (default 'hadir') untuk siswa aktif ---------
 --  Saat pertemuan dibuat, semua siswa yang aktif terdaftar di kelas+term itu
 --  langsung dibuatkan baris presensi 'hadir'. Guru tinggal ubah yg tidak hadir.
+--  CATATAN: start_date TIDAK dipakai memfilter. Siswa sering baru didaftarkan
+--  setelah pertemuannya berlangsung (laporan backdate), jadi patokannya hanya
+--  apakah siswa sudah keluar dari kelas (end_date) pada tanggal itu.
 create or replace function seed_attendance()
 returns trigger language plpgsql as $$
 begin
@@ -310,7 +379,6 @@ begin
    where e.class_id = new.class_id
      and e.term_id  = new.term_id
      and e.is_active = true
-     and e.start_date <= new.meeting_date
      and (e.end_date is null or e.end_date >= new.meeting_date)
      and s.status = 'aktif'
   on conflict (meeting_id, student_id) do nothing;

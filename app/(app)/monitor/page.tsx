@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/toast';
 import type { Meeting, Profile, School } from '@/lib/types';
-import { currentMonthISO, formatDateShort } from '@/lib/format';
+import { currentMonthISO, formatDateShort, monthRange } from '@/lib/format';
 import {
   EmptyState,
   LoadingState,
@@ -56,12 +56,8 @@ export default function MonitorPage() {
       .order('created_at', { ascending: false });
 
     if (month) {
-      const start = `${month}-01`;
-      const next = new Date(`${start}T00:00:00`);
-      next.setMonth(next.getMonth() + 1);
-      query = query
-        .gte('meeting_date', start)
-        .lt('meeting_date', next.toISOString().slice(0, 10));
+      const { start, end } = monthRange(month);
+      query = query.gte('meeting_date', start).lt('meeting_date', end);
     }
     if (schoolFilter) query = query.eq('school_id', schoolFilter);
     if (teacherFilter) query = query.eq('actual_teacher_id', teacherFilter);
