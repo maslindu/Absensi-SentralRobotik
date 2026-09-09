@@ -19,6 +19,7 @@ import type {
   AcademicTerm,
   Class,
   Enrollment,
+  School,
   Student,
 } from '@/lib/types';
 import { formatDateShort, termLabel, todayISO } from '@/lib/format';
@@ -65,6 +66,10 @@ interface GroupEnrollment {
   } | null;
 }
 
+interface RosterEnrollment extends GroupEnrollment {
+  students: Student | null;
+}
+
 const UNASSIGNED = '__none__';
 
 export default function AdminStudentsPage() {
@@ -72,8 +77,11 @@ export default function AdminStudentsPage() {
   const toast = useToast();
   const [students, setStudents] = useState<Student[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
   const [selectedTermId, setSelectedTermId] = useState('');
+  const [schoolFilter, setSchoolFilter] = useState('');
+  const [classFilter, setClassFilter] = useState('');
   const [groupEnrollments, setGroupEnrollments] = useState<GroupEnrollment[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -120,18 +128,20 @@ export default function AdminStudentsPage() {
 
   // Master data (kelas + term) — dimuat sekali.
   const loadMaster = useCallback(async () => {
-    const [cls, tm] = await Promise.all([
+    const [cls, sch, tm] = await Promise.all([
       supabase
         .from('classes')
         .select('*, schools:school_id(id, name)')
         .eq('is_active', true)
         .order('name'),
+      supabase.from('schools').select('*').eq('is_active', true).order('name'),
       supabase
         .from('academic_terms')
         .select('*')
         .order('year_label', { ascending: false }),
     ]);
     setClasses((cls.data as Class[]) ?? []);
+    setSchools((sch.data as School[]) ?? []);
     const termList = (tm.data as AcademicTerm[]) ?? [];
     setTerms(termList);
     const active = termList.find((t) => t.is_active);
@@ -140,22 +150,27 @@ export default function AdminStudentsPage() {
   }, []);
 
   // Siswa + enrollment (untuk pengelompokan) mengikuti term terpilih.
-  const loadStudents = useCallback(async (termId: string) => {
+  const loadStudents = useCallback(async (termId: string, selectedClassId: string) => {
+    if (!termId || !selectedClassId) {
+      setStudents([]);
+      setGroupEnrollments([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    const [st, en] = await Promise.all([
-      supabase.from('students').select('*').order('full_name'),
-      termId
-        ? supabase
-            .from('enrollments')
-            .select(
-              'student_id, class_id, end_date, classes:class_id(id, name, schools:school_id(id, name))'
-            )
-            .eq('term_id', termId)
-        : Promise.resolve({ data: [], error: null }),
-    ]);
-    if (st.error) toast('Gagal memuat data: ' + st.error.message, 'error');
-    setStudents((st.data as Student[]) ?? []);
-    setGroupEnrollments((en.data as unknown as GroupEnrollment[]) ?? []);
+    const { data, error } = await supabase
+      .from('enrollments')
+      .select(
+        'student_id, class_id, end_date, classes:class_id(id, name, schools:school_id(id, name)), students:student_id(*)'
+      )
+      .eq('term_id', termId)
+      .eq('class_id', selectedClassId)
+      .is('end_date', null)
+      .order('start_date');
+    if (error) toast('Gagal memuat data: ' + error.message, 'error');
+    const roster = (data as unknown as RosterEnrollment[]) ?? [];
+    setStudents(roster.flatMap((en) => (en.students ? [en.students] : [])));
+    setGroupEnrollments(roster);
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -165,12 +180,14 @@ export default function AdminStudentsPage() {
   }, [loadMaster]);
 
   useEffect(() => {
-    loadStudents(selectedTermId);
-  }, [selectedTermId, loadStudents]);
+    loadStudents(selectedTermId, classFilter);
+  }, [selectedTermId, classFilter, loadStudents]);
 
   function refresh() {
-    loadStudents(selectedTermId);
+    loadStudents(selectedTermId, classFilter);
   }
+
+  const classesOfSchool = classes.filter((c) => c.school_id === schoolFilter);
 
   // ---- Pengelompokan siswa per kelas (berdasar enrollment aktif di term) ----
   const groups = useMemo(() => {
@@ -497,7 +514,7 @@ export default function AdminStudentsPage() {
 
   function openImport() {
     const activeTerm = terms.find((t) => t.is_active);
-    setImportClassId('');
+    setImportClassId(classFilter);
     setImportTermId(selectedTermId || activeTerm?.id || '');
     setImportResult(null);
     setImportOpen(true);
@@ -606,11 +623,48 @@ export default function AdminStudentsPage() {
 
       {/* Toolbar: cari, filter semester, mode hapus massal */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
+        <select
+          aria-label="Filter sekolah"
+          className={`${inputCls} max-w-[16rem]`}
+          value={schoolFilter}
+          onChange={(e) => {
+            setSchoolFilter(e.target.value);
+            setClassFilter('');
+            setSearch('');
+            exitSelectMode();
+          }}
+        >
+          <option value="">Pilih sekolah</option>
+          {schools.map((school) => (
+            <option key={school.id} value={school.id}>
+              {school.name}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Filter kelas"
+          className={`${inputCls} max-w-[16rem]`}
+          value={classFilter}
+          onChange={(e) => {
+            setClassFilter(e.target.value);
+            setSearch('');
+            exitSelectMode();
+          }}
+          disabled={!schoolFilter}
+        >
+          <option value="">Pilih kelas</option>
+          {classesOfSchool.map((classItem) => (
+            <option key={classItem.id} value={classItem.id}>
+              {classItem.name}
+            </option>
+          ))}
+        </select>
         <input
           className={`${inputCls} max-w-xs`}
           placeholder="Cari nama / NIS…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          disabled={!classFilter}
         />
         <select
           className={`${inputCls} max-w-[16rem]`}
@@ -626,7 +680,7 @@ export default function AdminStudentsPage() {
             </option>
           ))}
         </select>
-        <div className="ml-auto">
+        <div className="sm:ml-auto">
           {selectMode ? (
             <button className={btnSecondary} onClick={exitSelectMode}>
               <X className="h-4 w-4" /> Selesai
@@ -635,6 +689,7 @@ export default function AdminStudentsPage() {
             <button
               className={btnSecondary}
               onClick={() => setSelectMode(true)}
+              disabled={!classFilter}
             >
               <Trash2 className="h-4 w-4" /> Pilih & Hapus
             </button>
@@ -644,6 +699,12 @@ export default function AdminStudentsPage() {
 
       {loading ? (
         <LoadingState />
+      ) : !schoolFilter || !classFilter ? (
+        <EmptyState
+          title="Pilih sekolah dan kelas"
+          hint="Daftar siswa akan dimuat setelah kamu memilih kelas agar halaman tetap ringan."
+          icon={<Users className="h-6 w-6" />}
+        />
       ) : totalShown === 0 ? (
         <EmptyState
           title={search ? 'Tidak ada siswa yang cocok' : 'Belum ada siswa'}

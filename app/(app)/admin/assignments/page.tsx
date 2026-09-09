@@ -38,6 +38,8 @@ export default function AssignmentsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [filterTerm, setFilterTerm] = useState('');
+  const [schoolFilter, setSchoolFilter] = useState('');
+  const [teacherFilter, setTeacherFilter] = useState('');
   const [form, setForm] = useState({
     teacher_id: '',
     school_id: '',
@@ -82,9 +84,16 @@ export default function AssignmentsPage() {
     load();
   }, [load]);
 
-  const filtered = filterTerm
-    ? assignments.filter((a) => a.term_id === filterTerm)
-    : assignments;
+  const filtered = assignments
+    .filter((a) => !filterTerm || a.term_id === filterTerm)
+    .filter((a) => !schoolFilter || a.school_id === schoolFilter)
+    .filter((a) => !teacherFilter || a.teacher_id === teacherFilter)
+    .sort(
+      (a, b) =>
+        (a.schools?.name ?? '').localeCompare(b.schools?.name ?? '', 'id') ||
+        (a.classes?.name ?? '').localeCompare(b.classes?.name ?? '', 'id') ||
+        (a.profiles?.full_name ?? '').localeCompare(b.profiles?.full_name ?? '', 'id')
+    );
 
   const classesOfSchool = classes.filter(
     (c) => c.school_id === form.school_id
@@ -151,18 +160,47 @@ export default function AssignmentsPage() {
         }
       />
 
-      <select
-        className={`${inputCls} mb-4 max-w-sm`}
-        value={filterTerm}
-        onChange={(e) => setFilterTerm(e.target.value)}
-      >
-        <option value="">Semua term</option>
-        {terms.map((t) => (
-          <option key={t.id} value={t.id}>
-            {termLabel(t)}
-          </option>
-        ))}
-      </select>
+      <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <select
+          aria-label="Filter term"
+          className={inputCls}
+          value={filterTerm}
+          onChange={(e) => setFilterTerm(e.target.value)}
+        >
+          <option value="">Semua term</option>
+          {terms.map((t) => (
+            <option key={t.id} value={t.id}>
+              {termLabel(t)}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Filter sekolah"
+          className={inputCls}
+          value={schoolFilter}
+          onChange={(e) => setSchoolFilter(e.target.value)}
+        >
+          <option value="">Semua sekolah</option>
+          {schools.map((school) => (
+            <option key={school.id} value={school.id}>
+              {school.name}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Filter guru"
+          className={inputCls}
+          value={teacherFilter}
+          onChange={(e) => setTeacherFilter(e.target.value)}
+        >
+          <option value="">Semua pengajar</option>
+          {teachers.map((teacher) => (
+            <option key={teacher.id} value={teacher.id}>
+              {teacher.full_name}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {loading ? (
         <LoadingState />

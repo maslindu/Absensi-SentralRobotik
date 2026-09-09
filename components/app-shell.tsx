@@ -134,12 +134,12 @@ export default function AppShell({
 
       {/* Konten utama */}
       <div className="flex min-h-screen flex-1 flex-col md:pl-64">
-        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur-md md:px-8">
-          <div className="flex items-center gap-2 md:hidden">
+        <header className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-slate-200 bg-white/90 px-3 py-3 backdrop-blur-md sm:px-4 md:px-8">
+          <div className="min-w-0 flex items-center gap-2 md:hidden">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
               <Bot className="h-4 w-4" />
             </span>
-            <span className="text-sm font-bold text-slate-900">
+            <span className="truncate text-sm font-bold text-slate-900">
               Presensi Robotik
             </span>
           </div>
@@ -156,11 +156,11 @@ export default function AppShell({
           </div>
           <div className="flex items-center gap-3">
             {termLabel ? (
-              <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 md:hidden">
+              <span className="max-w-32 truncate rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 md:hidden">
                 {termLabel}
               </span>
             ) : (
-              <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 md:hidden">
+              <span className="max-w-32 truncate rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 md:hidden">
                 Belum ada term
               </span>
             )}
@@ -177,7 +177,7 @@ export default function AppShell({
           </div>
         </header>
 
-        <main className="flex-1 px-4 py-6 pb-24 md:px-8 md:pb-10">
+        <main className="flex-1 px-3 py-5 pb-24 sm:px-4 sm:py-6 md:px-8 md:pb-10">
           {children}
         </main>
 

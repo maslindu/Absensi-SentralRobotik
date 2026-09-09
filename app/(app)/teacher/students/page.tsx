@@ -39,6 +39,7 @@ export default function TeacherStudentsPage() {
 
   const [term, setTerm] = useState<AcademicTerm | null>(null);
   const [assignments, setAssignments] = useState<TeacherAssignment[]>([]);
+  const [schoolFilter, setSchoolFilter] = useState('');
   const [classId, setClassId] = useState('');
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +93,6 @@ export default function TeacherStudentsPage() {
           .eq('is_active', true);
         const list = (asg as TeacherAssignment[]) ?? [];
         setAssignments(list);
-        if (list.length > 0) setClassId(list[0].class_id);
       }
       setLoading(false);
     })();
@@ -299,6 +299,16 @@ export default function TeacherStudentsPage() {
 
   const activeRoster = enrollments.filter((e) => !e.end_date);
   const pastRoster = enrollments.filter((e) => e.end_date);
+  const assignedSchools = assignments.reduce<TeacherAssignment[]>(
+    (result, assignment) =>
+      result.some((item) => item.school_id === assignment.school_id)
+        ? result
+        : [...result, assignment],
+    []
+  );
+  const classesOfSchool = assignments.filter(
+    (assignment) => assignment.school_id === schoolFilter
+  );
 
   return (
     <div>
@@ -310,30 +320,63 @@ export default function TeacherStudentsPage() {
             <button className={btnSecondary} onClick={downloadStudentTemplate}>
               <Download className="h-4 w-4" /> Template
             </button>
-            <button className={btnSecondary} onClick={openImport}>
+            <button
+              className={btnSecondary}
+              onClick={openImport}
+              disabled={!classId}
+            >
               <FileSpreadsheet className="h-4 w-4" /> Import Excel
             </button>
-            <button className={btnPrimary} onClick={openAdd}>
+            <button
+              className={btnPrimary}
+              onClick={openAdd}
+              disabled={!classId}
+            >
               <Plus className="h-4 w-4" /> Tambah Siswa
             </button>
           </div>
         }
       />
 
+      <div className="mb-4 grid gap-2 sm:grid-cols-2">
+      <select
+        aria-label="Pilih sekolah"
+        className={inputCls}
+        value={schoolFilter}
+        onChange={(e) => {
+          setSchoolFilter(e.target.value);
+          setClassId('');
+        }}
+      >
+        <option value="">Pilih sekolah</option>
+        {assignedSchools.map((assignment) => (
+          <option key={assignment.school_id} value={assignment.school_id}>
+            {assignment.schools?.name}
+          </option>
+        ))}
+      </select>
       <select
         className={`${inputCls} mb-4 max-w-sm`}
         value={classId}
         onChange={(e) => setClassId(e.target.value)}
+        disabled={!schoolFilter}
       >
-        {assignments.map((a) => (
+        <option value="">Pilih kelas</option>
+        {classesOfSchool.map((a) => (
           <option key={a.id} value={a.class_id}>
             {a.schools?.name} — Kelas {a.classes?.name}
           </option>
         ))}
       </select>
+      </div>
 
       {listLoading ? (
         <LoadingState />
+      ) : !schoolFilter || !classId ? (
+        <EmptyState
+          title="Pilih sekolah dan kelas"
+          hint="Roster siswa akan dimuat setelah kamu memilih kelas."
+        />
       ) : enrollments.length === 0 ? (
         <EmptyState
           title="Belum ada siswa di kelas ini"

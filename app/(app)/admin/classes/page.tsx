@@ -28,6 +28,8 @@ interface FormState {
   is_active: boolean;
 }
 
+type SortBy = 'school' | 'class' | 'grade' | 'status';
+
 const emptyForm: FormState = {
   school_id: '',
   name: '',
@@ -41,6 +43,7 @@ export default function ClassesPage() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
   const [schoolFilter, setSchoolFilter] = useState('');
+  const [sortBy, setSortBy] = useState<SortBy>('school');
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -67,9 +70,39 @@ export default function ClassesPage() {
     load();
   }, [load]);
 
-  const filtered = schoolFilter
-    ? classes.filter((c) => c.school_id === schoolFilter)
-    : classes;
+  const filtered = classes
+    .filter((c) => !schoolFilter || c.school_id === schoolFilter)
+    .sort((a, b) => {
+      const compare = (first: string | null | undefined, second: string | null | undefined) =>
+        (first ?? '').localeCompare(second ?? '', 'id', { numeric: true, sensitivity: 'base' });
+
+      if (sortBy === 'school') {
+        return (
+          compare(a.schools?.name, b.schools?.name) ||
+          compare(a.grade_level, b.grade_level) ||
+          compare(a.name, b.name)
+        );
+      }
+      if (sortBy === 'grade') {
+        return (
+          compare(a.grade_level, b.grade_level) ||
+          compare(a.schools?.name, b.schools?.name) ||
+          compare(a.name, b.name)
+        );
+      }
+      if (sortBy === 'status') {
+        return (
+          Number(b.is_active) - Number(a.is_active) ||
+          compare(a.schools?.name, b.schools?.name) ||
+          compare(a.name, b.name)
+        );
+      }
+      return (
+        compare(a.name, b.name) ||
+        compare(a.schools?.name, b.schools?.name) ||
+        compare(a.grade_level, b.grade_level)
+      );
+    });
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -130,18 +163,32 @@ export default function ClassesPage() {
         }
       />
 
-      <select
-        className={`${inputCls} mb-4 max-w-sm`}
-        value={schoolFilter}
-        onChange={(e) => setSchoolFilter(e.target.value)}
-      >
-        <option value="">Semua sekolah</option>
-        {schools.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.name}
-          </option>
-        ))}
-      </select>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+        <select
+          aria-label="Filter sekolah"
+          className={`${inputCls} max-w-sm`}
+          value={schoolFilter}
+          onChange={(e) => setSchoolFilter(e.target.value)}
+        >
+          <option value="">Semua sekolah</option>
+          {schools.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Urutkan kelas"
+          className={`${inputCls} max-w-sm`}
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortBy)}
+        >
+          <option value="school">Urutkan: Sekolah</option>
+          <option value="class">Urutkan: Nama kelas</option>
+          <option value="grade">Urutkan: Grade / tingkat</option>
+          <option value="status">Urutkan: Status</option>
+        </select>
+      </div>
 
       {loading ? (
         <LoadingState />

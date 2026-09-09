@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ImageIcon, Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/toast';
-import type { AcademicTerm, Meeting } from '@/lib/types';
+import type { AcademicTerm, Meeting, TeacherAssignment } from '@/lib/types';
 import { formatDateShort, termLabel } from '@/lib/format';
 import {
   EmptyState,
@@ -20,24 +20,44 @@ export default function TeacherMeetingsPage() {
   const toast = useToast();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
+  const [assignments, setAssignments] = useState<TeacherAssignment[]>([]);
   const [termFilter, setTermFilter] = useState<string>('');
+  const [schoolFilter, setSchoolFilter] = useState('');
+  const [classFilter, setClassFilter] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from('academic_terms')
-        .select('*')
-        .order('year_label', { ascending: false });
+      const [termResult, userResult] = await Promise.all([
+        supabase
+          .from('academic_terms')
+          .select('*')
+          .order('year_label', { ascending: false }),
+        supabase.auth.getUser(),
+      ]);
+      const { data } = termResult;
       const list = (data as AcademicTerm[]) ?? [];
       setTerms(list);
       const active = list.find((t) => t.is_active);
       setTermFilter(active?.id ?? '');
+      if (userResult.data.user) {
+        const { data: assignmentData } = await supabase
+          .from('teacher_assignments')
+          .select('*, schools:school_id(id, name), classes:class_id(id, name)')
+          .eq('teacher_id', userResult.data.user.id)
+          .eq('is_active', true);
+        setAssignments((assignmentData as TeacherAssignment[]) ?? []);
+      }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const load = useCallback(async () => {
+    if (!termFilter || !schoolFilter || !classFilter) {
+      setMeetings([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     let query = supabase
       .from('meetings')
@@ -46,17 +66,31 @@ export default function TeacherMeetingsPage() {
       )
       .order('meeting_date', { ascending: false })
       .order('created_at', { ascending: false });
-    if (termFilter) query = query.eq('term_id', termFilter);
+    query = query
+      .eq('term_id', termFilter)
+      .eq('school_id', schoolFilter)
+      .eq('class_id', classFilter);
     const { data, error } = await query;
     if (error) toast('Gagal memuat pertemuan: ' + error.message, 'error');
     setMeetings((data as Meeting[]) ?? []);
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [termFilter]);
+  }, [termFilter, schoolFilter, classFilter]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const assignedSchools = assignments.reduce<TeacherAssignment[]>(
+    (result, assignment) =>
+      result.some((item) => item.school_id === assignment.school_id)
+        ? result
+        : [...result, assignment],
+    []
+  );
+  const classesOfSchool = assignments.filter(
+    (assignment) => assignment.school_id === schoolFilter
+  );
 
   return (
     <div>
@@ -70,8 +104,10 @@ export default function TeacherMeetingsPage() {
         }
       />
 
+      <div className="mb-4 grid gap-2 sm:grid-cols-3">
       <select
-        className={`${inputCls} mb-4 max-w-sm`}
+        aria-label="Filter term"
+        className={inputCls}
         value={termFilter}
         onChange={(e) => setTermFilter(e.target.value)}
       >
@@ -83,9 +119,45 @@ export default function TeacherMeetingsPage() {
           </option>
         ))}
       </select>
+      <select
+        aria-label="Filter sekolah"
+        className={inputCls}
+        value={schoolFilter}
+        onChange={(e) => {
+          setSchoolFilter(e.target.value);
+          setClassFilter('');
+        }}
+      >
+        <option value="">Pilih sekolah</option>
+        {assignedSchools.map((assignment) => (
+          <option key={assignment.school_id} value={assignment.school_id}>
+            {assignment.schools?.name}
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label="Filter kelas"
+        className={inputCls}
+        value={classFilter}
+        onChange={(e) => setClassFilter(e.target.value)}
+        disabled={!schoolFilter}
+      >
+        <option value="">Pilih kelas</option>
+        {classesOfSchool.map((assignment) => (
+          <option key={assignment.id} value={assignment.class_id}>
+            Kelas {assignment.classes?.name}
+          </option>
+        ))}
+      </select>
+      </div>
 
       {loading ? (
         <LoadingState />
+      ) : !schoolFilter || !classFilter ? (
+        <EmptyState
+          title="Pilih sekolah dan kelas"
+          hint="Laporan pertemuan akan dimuat setelah kamu memilih kelas."
+        />
       ) : meetings.length === 0 ? (
         <EmptyState
           title="Belum ada laporan"
