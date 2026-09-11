@@ -71,6 +71,7 @@ interface RosterEnrollment extends GroupEnrollment {
 }
 
 const UNASSIGNED = '__none__';
+const ALL_SCHOOLS = '__all__';
 
 export default function AdminStudentsPage() {
   const supabase = createClient();
@@ -150,23 +151,31 @@ export default function AdminStudentsPage() {
   }, []);
 
   // Siswa + enrollment (untuk pengelompokan) mengikuti term terpilih.
-  const loadStudents = useCallback(async (termId: string, selectedClassId: string) => {
-    if (!termId || !selectedClassId) {
+  // Daftar hanya dimuat untuk satu kelas, atau untuk seluruh sekolah saat
+  // filter "Semua siswa" dipilih. Kondisi ini sengaja menjaga tampilan awal kosong.
+  const loadStudents = useCallback(async (
+    termId: string,
+    selectedSchoolId: string,
+    selectedClassId: string
+  ) => {
+    const showAllSchools = selectedSchoolId === ALL_SCHOOLS;
+    if (!termId || (!showAllSchools && !selectedClassId)) {
       setStudents([]);
       setGroupEnrollments([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from('enrollments')
       .select(
         'student_id, class_id, end_date, classes:class_id(id, name, schools:school_id(id, name)), students:student_id(*)'
       )
       .eq('term_id', termId)
-      .eq('class_id', selectedClassId)
       .is('end_date', null)
       .order('start_date');
+    if (!showAllSchools) query = query.eq('class_id', selectedClassId);
+    const { data, error } = await query;
     if (error) toast('Gagal memuat data: ' + error.message, 'error');
     const roster = (data as unknown as RosterEnrollment[]) ?? [];
     setStudents(roster.flatMap((en) => (en.students ? [en.students] : [])));
@@ -180,14 +189,18 @@ export default function AdminStudentsPage() {
   }, [loadMaster]);
 
   useEffect(() => {
-    loadStudents(selectedTermId, classFilter);
-  }, [selectedTermId, classFilter, loadStudents]);
+    loadStudents(selectedTermId, schoolFilter, classFilter);
+  }, [selectedTermId, schoolFilter, classFilter, loadStudents]);
 
   function refresh() {
-    loadStudents(selectedTermId, classFilter);
+    loadStudents(selectedTermId, schoolFilter, classFilter);
   }
 
   const classesOfSchool = classes.filter((c) => c.school_id === schoolFilter);
+  const viewingAllSchools = schoolFilter === ALL_SCHOOLS;
+  const canAddStudent = Boolean(
+    selectedTermId && schoolFilter && !viewingAllSchools && classFilter
+  );
 
   // ---- Pengelompokan siswa per kelas (berdasar enrollment aktif di term) ----
   const groups = useMemo(() => {
@@ -410,6 +423,10 @@ export default function AdminStudentsPage() {
 
   async function saveStudent(e: React.FormEvent) {
     e.preventDefault();
+    if (!studentForm.id && !canAddStudent) {
+      toast('Pilih sekolah, kelas, dan semester terlebih dahulu', 'error');
+      return;
+    }
     setSaving(true);
     const payload = {
       full_name: studentForm.full_name.trim(),
@@ -417,18 +434,57 @@ export default function AdminStudentsPage() {
       gender: studentForm.gender || null,
       status: studentForm.status,
     };
-    const { error } = studentForm.id
-      ? await supabase
+    if (studentForm.id) {
+      const { error } = await supabase
+        .from('students')
+        .update(payload)
+        .eq('id', studentForm.id);
+      setSaving(false);
+      if (error) {
+        toast('Gagal menyimpan: ' + error.message, 'error');
+        return;
+      }
+      toast('Siswa tersimpan');
+    } else {
+      // Identitas dan keanggotaan kelas harus dibuat berurutan. Jika enrollment
+      // gagal, identitas yang baru dibuat langsung dibersihkan agar tidak ada
+      // siswa yang "hilang" karena belum terdaftar di kelas mana pun.
+      const { data: student, error: studentError } = await supabase
+        .from('students')
+        .insert(payload)
+        .select('id')
+        .single();
+      if (studentError || !student) {
+        setSaving(false);
+        toast('Gagal menambah siswa: ' + (studentError?.message ?? ''), 'error');
+        return;
+      }
+
+      const { error: enrollmentError } = await supabase
+        .from('enrollments')
+        .insert({
+          student_id: student.id,
+          class_id: classFilter,
+          term_id: selectedTermId,
+          start_date: todayISO(),
+        });
+      if (enrollmentError) {
+        const { error: cleanupError } = await supabase
           .from('students')
-          .update(payload)
-          .eq('id', studentForm.id)
-      : await supabase.from('students').insert(payload);
-    setSaving(false);
-    if (error) {
-      toast('Gagal menyimpan: ' + error.message, 'error');
-      return;
+          .delete()
+          .eq('id', student.id);
+        setSaving(false);
+        toast(
+          cleanupError
+            ? 'Gagal mendaftarkan siswa ke kelas, dan data perlu dibersihkan manual: ' + enrollmentError.message
+            : 'Gagal mendaftarkan siswa ke kelas: ' + enrollmentError.message,
+          'error'
+        );
+        return;
+      }
+      setSaving(false);
+      toast('Siswa ditambahkan ke kelas');
     }
-    toast('Siswa tersimpan');
     setStudentModal(false);
     refresh();
   }
@@ -569,10 +625,26 @@ export default function AdminStudentsPage() {
         .from('enrollments')
         .insert(enrollRows);
       if (enErr) {
-        errors.push(
-          'Siswa dibuat, tetapi sebagian gagal didaftarkan ke kelas: ' +
-            enErr.message
-        );
+        // Insert enrollment batch bersifat atomik. Bila gagal, hapus kembali
+        // seluruh identitas yang baru dibuat agar import tidak menghasilkan
+        // siswa tanpa kelas.
+        const { error: cleanupError } = await supabase
+          .from('students')
+          .delete()
+          .in(
+            'id',
+            (inserted as { id: string }[]).map((student) => student.id)
+          );
+        setImportResult({
+          added: 0,
+          skipped,
+          errors: [
+            cleanupError
+              ? 'Gagal mendaftarkan siswa ke kelas, dan data perlu dibersihkan manual: ' + enErr.message
+              : 'Gagal mendaftarkan siswa ke kelas: ' + enErr.message,
+          ],
+        });
+        return;
       }
 
       setImportResult({
@@ -610,7 +682,14 @@ export default function AdminStudentsPage() {
             </button>
             <button
               className={btnPrimary}
+              disabled={!canAddStudent}
+              title={
+                canAddStudent
+                  ? 'Tambah siswa ke kelas yang dipilih'
+                  : 'Pilih sekolah dan kelas terlebih dahulu'
+              }
               onClick={() => {
+                if (!canAddStudent) return;
                 setStudentForm(emptyStudent);
                 setStudentModal(true);
               }}
@@ -635,6 +714,7 @@ export default function AdminStudentsPage() {
           }}
         >
           <option value="">Pilih sekolah</option>
+          <option value={ALL_SCHOOLS}>Semua siswa</option>
           {schools.map((school) => (
             <option key={school.id} value={school.id}>
               {school.name}
@@ -650,9 +730,11 @@ export default function AdminStudentsPage() {
             setSearch('');
             exitSelectMode();
           }}
-          disabled={!schoolFilter}
+          disabled={!schoolFilter || viewingAllSchools}
         >
-          <option value="">Pilih kelas</option>
+          <option value="">
+            {viewingAllSchools ? 'Semua kelas' : 'Pilih kelas'}
+          </option>
           {classesOfSchool.map((classItem) => (
             <option key={classItem.id} value={classItem.id}>
               {classItem.name}
@@ -664,7 +746,7 @@ export default function AdminStudentsPage() {
           placeholder="Cari nama / NIS…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          disabled={!classFilter}
+          disabled={!classFilter && !viewingAllSchools}
         />
         <select
           className={`${inputCls} max-w-[16rem]`}
@@ -699,10 +781,14 @@ export default function AdminStudentsPage() {
 
       {loading ? (
         <LoadingState />
-      ) : !schoolFilter || !classFilter ? (
+      ) : !schoolFilter || (!viewingAllSchools && !classFilter) ? (
         <EmptyState
-          title="Pilih sekolah dan kelas"
-          hint="Daftar siswa akan dimuat setelah kamu memilih kelas agar halaman tetap ringan."
+          title={schoolFilter ? 'Pilih kelas' : 'Pilih sekolah dan kelas'}
+          hint={
+            schoolFilter
+              ? 'Pilih kelas untuk memuat daftar siswa, atau pilih “Semua siswa” untuk melihat seluruh kelas.'
+              : 'Daftar siswa akan dimuat setelah kamu memilih kelas agar halaman tetap ringan.'
+          }
           icon={<Users className="h-6 w-6" />}
         />
       ) : totalShown === 0 ? (
@@ -878,6 +964,13 @@ export default function AdminStudentsPage() {
         onClose={() => setStudentModal(false)}
       >
         <form onSubmit={saveStudent} className="space-y-4">
+          {!studentForm.id && (
+            <div className="rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-800 ring-1 ring-brand-100">
+              Siswa baru akan langsung didaftarkan ke kelas{' '}
+              <b>{classes.find((c) => c.id === classFilter)?.name}</b> pada
+              semester yang dipilih.
+            </div>
+          )}
           <Field label="Nama Lengkap" required>
             <input
               className={inputCls}
