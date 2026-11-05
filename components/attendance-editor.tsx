@@ -1,12 +1,22 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { UserMinus, UserPlus } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Check, UserMinus, UserPlus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { backdateEnrollments } from '@/lib/enrollment';
 import { useToast } from '@/components/toast';
-import type { Attendance, AttendanceStatus, Student } from '@/lib/types';
-import { ATTENDANCE_STATUSES } from '@/lib/types';
+import type {
+  Attendance,
+  AttendanceStatus,
+  ProgressLevel,
+  Student,
+} from '@/lib/types';
+import {
+  ATTENDANCE_STATUSES,
+  PROGRESS_LABEL,
+  PROGRESS_LEVELS,
+  SCORE_MAX,
+} from '@/lib/types';
 import {
   ConfirmDialog,
   EmptyState,
@@ -34,6 +44,12 @@ const STATUS_ACTIVE_CLS: Record<AttendanceStatus, string> = {
   alpa: 'bg-red-600 text-white border-red-600',
 };
 
+const PROGRESS_ACTIVE_CLS: Record<ProgressLevel, string> = {
+  berkembang: 'bg-emerald-600 text-white border-emerald-600',
+  cukup: 'bg-amber-500 text-white border-amber-500',
+  belum: 'bg-slate-600 text-white border-slate-600',
+};
+
 export default function AttendanceEditor({
   meetingId,
   classId,
@@ -52,6 +68,8 @@ export default function AttendanceEditor({
   const [rows, setRows] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
+  // id baris yang baru saja tersimpan -> tampilkan centang sesaat
+  const [savedId, setSavedId] = useState<string | null>(null);
 
   // tambah siswa saat pertemuan berlangsung
   const [addOpen, setAddOpen] = useState(false);
@@ -83,37 +101,69 @@ export default function AttendanceEditor({
     load();
   }, [load]);
 
-  async function setStatus(row: Attendance, status: AttendanceStatus) {
-    if (readOnly || row.status === status) return;
+  function flashSaved(id: string) {
+    setSavedId(id);
+    setTimeout(() => setSavedId((cur) => (cur === id ? null : cur)), 1200);
+  }
+
+  // Satu pintu penyimpanan untuk status/nilai/progres/keterangan agar
+  // indikator "menyimpan" dan "tersimpan" konsisten di seluruh baris.
+  async function patchRow(row: Attendance, patch: Partial<Attendance>) {
+    if (readOnly) return;
     setSavingId(row.id);
     const { error } = await supabase
       .from('attendance')
-      .update({ status })
+      .update(patch)
       .eq('id', row.id);
     setSavingId(null);
     if (error) {
-      toast('Gagal menyimpan status: ' + error.message, 'error');
+      toast('Gagal menyimpan: ' + error.message, 'error');
       return;
     }
-    setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status } : r)));
+    setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, ...patch } : r)));
+    flashSaved(row.id);
   }
 
-  async function saveRemarks(row: Attendance, remarks: string) {
-    if (readOnly) return;
-    const value = remarks.trim() || null;
-    if ((row.remarks ?? null) === value) return;
-    const { error } = await supabase
-      .from('attendance')
-      .update({ remarks: value })
-      .eq('id', row.id);
-    if (error) {
-      toast('Gagal menyimpan keterangan', 'error');
+  function setStatus(row: Attendance, status: AttendanceStatus) {
+    if (row.status === status) return;
+    patchRow(row, { status });
+  }
+
+  // Tap chip yang sama = batalkan penilaian (kembali ke "belum dinilai").
+  function setProgress(row: Attendance, progress: ProgressLevel) {
+    patchRow(row, { progress: row.progress === progress ? null : progress });
+  }
+
+  function saveScore(row: Attendance, raw: string) {
+    const text = raw.trim();
+    if (text === '') {
+      if (row.score === null) return;
+      patchRow(row, { score: null });
       return;
     }
-    setRows((rs) =>
-      rs.map((r) => (r.id === row.id ? { ...r, remarks: value } : r))
-    );
+    const value = Number(text.replace(',', '.'));
+    if (!Number.isFinite(value) || value < 0 || value > SCORE_MAX) {
+      toast('Nilai harus berupa angka 0-' + SCORE_MAX, 'error');
+      return;
+    }
+    if (row.score !== null && Math.abs(row.score - value) < 0.001) return;
+    patchRow(row, { score: value });
   }
+
+  function saveRemarks(row: Attendance, remarks: string) {
+    const value = remarks.trim() || null;
+    if ((row.remarks ?? null) === value) return;
+    patchRow(row, { remarks: value });
+  }
+
+  const stats = useMemo(
+    () => ({
+      hadir: rows.filter((r) => r.status === 'hadir').length,
+      dinilai: rows.filter((r) => r.score !== null || r.progress !== null)
+        .length,
+    }),
+    [rows]
+  );
 
   async function openAdd() {
     setAddMode('baru');
@@ -155,9 +205,7 @@ export default function AttendanceEditor({
         studentId = student.id;
         studentName = student.full_name;
       } else {
-        const chosen = existingStudents.find(
-          (s) => s.id === selectedStudentId
-        );
+        const chosen = existingStudents.find((s) => s.id === selectedStudentId);
         if (!chosen) return;
         studentId = chosen.id;
         studentName = chosen.full_name;
@@ -200,7 +248,7 @@ export default function AttendanceEditor({
         return;
       }
 
-      toast(`${studentName} ditambahkan ke pertemuan ini`);
+      toast(studentName + ' ditambahkan ke pertemuan ini');
       setAddOpen(false);
       load();
     } finally {
@@ -235,7 +283,8 @@ export default function AttendanceEditor({
       return;
     }
     toast(
-      `${row.student_name_snapshot} dikeluarkan — tidak muncul di pertemuan berikutnya`
+      row.student_name_snapshot +
+        ' dikeluarkan — tidak muncul di pertemuan berikutnya'
     );
   }
 
@@ -243,11 +292,18 @@ export default function AttendanceEditor({
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm text-slate-500">
-          {rows.length} siswa ·{' '}
-          {rows.filter((r) => r.status === 'hadir').length} hadir
-        </p>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-600">
+            {rows.length} siswa
+          </span>
+          <span className="rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700 ring-1 ring-emerald-200">
+            {stats.hadir} hadir
+          </span>
+          <span className="rounded-full bg-brand-50 px-2.5 py-1 font-semibold text-brand-700 ring-1 ring-brand-100">
+            {stats.dinilai}/{rows.length} dinilai
+          </span>
+        </div>
         {!readOnly && (
           <button className={btnSmall} onClick={openAdd}>
             <UserPlus className="h-3.5 w-3.5" /> Tambah Siswa
@@ -261,49 +317,115 @@ export default function AttendanceEditor({
           hint="Pastikan siswa sudah ter-enroll di kelas ini, atau tambahkan lewat tombol Tambah Siswa."
         />
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-2.5">
           {rows.map((row) => (
             <li
               key={row.id}
-              className="rounded-xl border border-slate-200 bg-white p-3"
+              className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition hover:border-slate-300"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-medium text-slate-900">
-                  {row.student_name_snapshot}
+              <div className="flex items-start justify-between gap-2">
+                <p className="flex min-w-0 items-center gap-2 font-semibold text-slate-900">
+                  <span className="truncate">{row.student_name_snapshot}</span>
                   {savingId === row.id && (
-                    <Spinner className="ml-2 inline h-3.5 w-3.5 text-slate-400" />
+                    <Spinner className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  )}
+                  {savedId === row.id && savingId !== row.id && (
+                    <Check className="h-4 w-4 shrink-0 text-emerald-600" />
                   )}
                 </p>
                 {!readOnly && (
                   <button
-                    className="inline-flex items-center gap-1 text-xs text-red-500 hover:underline"
+                    className="shrink-0 rounded-lg p-1 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                    title="Keluarkan dari kelas"
+                    aria-label={'Keluarkan ' + row.student_name_snapshot}
                     onClick={() => setToRemove(row)}
                   >
-                    <UserMinus className="h-3.5 w-3.5" /> Keluarkan
+                    <UserMinus className="h-4 w-4" />
                   </button>
                 )}
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+
+              {/* Kehadiran — grid agar 4 tombol selalu sejajar & lega di HP */}
+              <div className="mt-2.5 grid grid-cols-4 gap-1.5">
                 {ATTENDANCE_STATUSES.map((st) => (
                   <button
                     key={st}
                     type="button"
                     disabled={readOnly}
                     onClick={() => setStatus(row, st)}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                    className={`rounded-xl border px-2 py-2 text-xs font-semibold transition ${
                       row.status === st
                         ? STATUS_ACTIVE_CLS[st]
                         : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
-                    } ${readOnly ? 'cursor-default' : ''}`}
+                    } ${readOnly ? 'cursor-default' : 'active:scale-[0.97]'}`}
                   >
                     {STATUS_LABEL[st]}
                   </button>
                 ))}
               </div>
+
+              {/* Penilaian — nilai angka & progres, keduanya opsional */}
+              {(!readOnly || row.score !== null || row.progress !== null) && (
+                <div className="mt-3 space-y-2 rounded-xl bg-slate-50 p-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-14 shrink-0 text-xs font-semibold text-slate-500">
+                      Nilai
+                    </span>
+                    {readOnly ? (
+                      <span className="text-sm font-semibold text-slate-800">
+                        {row.score ?? '—'}
+                      </span>
+                    ) : (
+                      <>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          min={0}
+                          max={SCORE_MAX}
+                          step="any"
+                          placeholder="—"
+                          defaultValue={row.score ?? ''}
+                          onBlur={(e) => saveScore(row, e.target.value)}
+                          className="w-20 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-center text-sm font-semibold text-slate-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
+                          aria-label={'Nilai ' + row.student_name_snapshot}
+                        />
+                        <span className="text-xs text-slate-400">
+                          / {SCORE_MAX}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-14 shrink-0 text-xs font-semibold text-slate-500">
+                      Progres
+                    </span>
+                    <div className="flex flex-1 gap-1.5">
+                      {PROGRESS_LEVELS.map((lv) => (
+                        <button
+                          key={lv}
+                          type="button"
+                          disabled={readOnly}
+                          onClick={() => setProgress(row, lv)}
+                          className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition ${
+                            row.progress === lv
+                              ? PROGRESS_ACTIVE_CLS[lv]
+                              : 'border-slate-200 bg-white text-slate-500'
+                          } ${
+                            readOnly ? 'cursor-default' : 'active:scale-[0.97]'
+                          }`}
+                        >
+                          {PROGRESS_LABEL[lv]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {(!readOnly || row.remarks) && (
                 <input
-                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:border-brand-500 focus:outline-none disabled:border-transparent disabled:bg-transparent disabled:px-0"
-                  placeholder="Keterangan (opsional)"
+                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200 disabled:border-transparent disabled:bg-transparent disabled:px-0"
+                  placeholder="Catatan untuk siswa ini (opsional)"
                   defaultValue={row.remarks ?? ''}
                   disabled={readOnly}
                   onBlur={(e) => saveRemarks(row, e.target.value)}
@@ -376,15 +498,15 @@ export default function AttendanceEditor({
                 {existingStudents.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.full_name}
-                    {s.nis ? ` (${s.nis})` : ''}
+                    {s.nis ? ' (' + s.nis + ')' : ''}
                   </option>
                 ))}
               </select>
             </Field>
           )}
           <p className="rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">
-            Siswa akan di-enroll ke kelas ini (mulai {meetingDate}) dan
-            langsung muncul di presensi pertemuan ini dengan status hadir.
+            Siswa akan di-enroll ke kelas ini (mulai {meetingDate}) dan langsung
+            muncul di presensi pertemuan ini dengan status hadir.
           </p>
           <div className="flex justify-end gap-2">
             <button

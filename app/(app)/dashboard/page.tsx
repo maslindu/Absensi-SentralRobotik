@@ -14,6 +14,14 @@ import { createClient } from '@/lib/supabase/server';
 import { termLabel, currentMonthISO, monthRange } from '@/lib/format';
 import { PageHeader, btnPrimary, btnSecondary } from '@/components/ui';
 
+// Bentuk kartu "kelas yang kamu ampu" — kolom yang di-embed PostgREST
+// tidak otomatis bertipe, jadi dinyatakan di sini.
+interface AssignmentCard {
+  id: string;
+  classes: { id: string; name: string } | null;
+  schools: { id: string; name: string } | null;
+}
+
 function StatCard({
   label,
   value,
@@ -51,7 +59,8 @@ export default async function DashboardPage() {
           .eq('teacher_id', session.userId)
           .eq('term_id', term.id)
           .eq('is_active', true)
-      : { data: [] };
+          .returns<AssignmentCard[]>()
+      : { data: [] as AssignmentCard[] };
 
     return (
       <div>
@@ -73,7 +82,7 @@ export default async function DashboardPage() {
         </h2>
         {assignments && assignments.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {assignments.map((a: any) => (
+            {assignments.map((a) => (
               <div key={a.id} className="card p-4">
                 <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
                   <DoorOpen className="h-4.5 w-4.5" />

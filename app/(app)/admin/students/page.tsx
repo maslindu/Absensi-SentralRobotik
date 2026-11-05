@@ -85,6 +85,7 @@ export default function AdminStudentsPage() {
   const [classFilter, setClassFilter] = useState('');
   const [groupEnrollments, setGroupEnrollments] = useState<GroupEnrollment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [masterLoaded, setMasterLoaded] = useState(false);
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
@@ -147,22 +148,32 @@ export default function AdminStudentsPage() {
     setTerms(termList);
     const active = termList.find((t) => t.is_active);
     setSelectedTermId((prev) => prev || active?.id || termList[0]?.id || '');
+    setMasterLoaded(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Siswa + enrollment (untuk pengelompokan) mengikuti term terpilih.
-  // Daftar hanya dimuat untuk satu kelas, atau untuk seluruh sekolah saat
-  // filter "Semua siswa" dipilih. Kondisi ini sengaja menjaga tampilan awal kosong.
+  // Memilih sekolah sudah cukup: seluruh siswa sekolah itu dimuat lalu
+  // dikelompokkan per kelas. Memilih kelas hanya mempersempit ke satu kelas.
+  // Tampilan awal (belum pilih sekolah) tetap kosong agar halaman ringan.
   const loadStudents = useCallback(async (
     termId: string,
     selectedSchoolId: string,
-    selectedClassId: string
+    selectedClassId: string,
+    classList: Class[],
+    ready: boolean
   ) => {
     const showAllSchools = selectedSchoolId === ALL_SCHOOLS;
-    if (!termId || (!showAllSchools && !selectedClassId)) {
+    if (!termId || !selectedSchoolId) {
       setStudents([]);
       setGroupEnrollments([]);
       setLoading(false);
+      return;
+    }
+    // Daftar kelas dipakai untuk menerjemahkan "sekolah" -> kelas-kelasnya,
+    // jadi tunggu master data selesai dimuat dulu.
+    if (!ready) {
+      setLoading(true);
       return;
     }
     setLoading(true);
@@ -174,7 +185,20 @@ export default function AdminStudentsPage() {
       .eq('term_id', termId)
       .is('end_date', null)
       .order('start_date');
-    if (!showAllSchools) query = query.eq('class_id', selectedClassId);
+    if (selectedClassId) {
+      query = query.eq('class_id', selectedClassId);
+    } else if (!showAllSchools) {
+      const idsOfSchool = classList
+        .filter((c) => c.school_id === selectedSchoolId)
+        .map((c) => c.id);
+      if (idsOfSchool.length === 0) {
+        setStudents([]);
+        setGroupEnrollments([]);
+        setLoading(false);
+        return;
+      }
+      query = query.in('class_id', idsOfSchool);
+    }
     const { data, error } = await query;
     if (error) toast('Gagal memuat data: ' + error.message, 'error');
     const roster = (data as unknown as RosterEnrollment[]) ?? [];
@@ -189,11 +213,18 @@ export default function AdminStudentsPage() {
   }, [loadMaster]);
 
   useEffect(() => {
-    loadStudents(selectedTermId, schoolFilter, classFilter);
-  }, [selectedTermId, schoolFilter, classFilter, loadStudents]);
+    loadStudents(selectedTermId, schoolFilter, classFilter, classes, masterLoaded);
+  }, [
+    selectedTermId,
+    schoolFilter,
+    classFilter,
+    classes,
+    masterLoaded,
+    loadStudents,
+  ]);
 
   function refresh() {
-    loadStudents(selectedTermId, schoolFilter, classFilter);
+    loadStudents(selectedTermId, schoolFilter, classFilter, classes, masterLoaded);
   }
 
   const classesOfSchool = classes.filter((c) => c.school_id === schoolFilter);
@@ -733,7 +764,7 @@ export default function AdminStudentsPage() {
           disabled={!schoolFilter || viewingAllSchools}
         >
           <option value="">
-            {viewingAllSchools ? 'Semua kelas' : 'Pilih kelas'}
+            {viewingAllSchools ? 'Semua kelas' : 'Semua kelas di sekolah ini'}
           </option>
           {classesOfSchool.map((classItem) => (
             <option key={classItem.id} value={classItem.id}>
@@ -746,7 +777,7 @@ export default function AdminStudentsPage() {
           placeholder="Cari nama / NIS…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          disabled={!classFilter && !viewingAllSchools}
+          disabled={!schoolFilter}
         />
         <select
           className={`${inputCls} max-w-[16rem]`}
@@ -771,7 +802,7 @@ export default function AdminStudentsPage() {
             <button
               className={btnSecondary}
               onClick={() => setSelectMode(true)}
-              disabled={!classFilter}
+              disabled={!schoolFilter}
             >
               <Trash2 className="h-4 w-4" /> Pilih & Hapus
             </button>
@@ -781,20 +812,22 @@ export default function AdminStudentsPage() {
 
       {loading ? (
         <LoadingState />
-      ) : !schoolFilter || (!viewingAllSchools && !classFilter) ? (
+      ) : !schoolFilter ? (
         <EmptyState
-          title={schoolFilter ? 'Pilih kelas' : 'Pilih sekolah dan kelas'}
-          hint={
-            schoolFilter
-              ? 'Pilih kelas untuk memuat daftar siswa, atau pilih “Semua siswa” untuk melihat seluruh kelas.'
-              : 'Daftar siswa akan dimuat setelah kamu memilih kelas agar halaman tetap ringan.'
-          }
+          title="Pilih sekolah"
+          hint="Daftar siswa langsung muncul dikelompokkan per kelas setelah sekolah dipilih. Filter kelas hanya dipakai bila ingin mempersempit ke satu kelas."
           icon={<Users className="h-6 w-6" />}
         />
       ) : totalShown === 0 ? (
         <EmptyState
           title={search ? 'Tidak ada siswa yang cocok' : 'Belum ada siswa'}
-          hint={search ? undefined : 'Tambahkan siswa pertama atau import Excel.'}
+          hint={
+            search
+              ? undefined
+              : viewingAllSchools || !classFilter
+                ? 'Belum ada siswa terdaftar pada semester ini. Pilih satu kelas lalu tambahkan siswa, atau import Excel.'
+                : 'Tambahkan siswa pertama atau import Excel.'
+          }
           icon={<Users className="h-6 w-6" />}
         />
       ) : (
@@ -1124,7 +1157,7 @@ export default function AdminStudentsPage() {
                 {enrollments.map((en) => (
                   <tr key={en.id} className="border-b border-slate-50 transition-colors hover:bg-slate-50/50">
                     <td className="px-3 py-2">
-                      {(en.classes as any)?.schools?.name} —{' '}
+                      {en.classes?.schools?.name} —{' '}
                       {en.classes?.name}
                     </td>
                     <td className="px-3 py-2">

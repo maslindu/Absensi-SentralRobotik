@@ -21,12 +21,18 @@ import type {
   AcademicTerm,
   AttendanceStatus,
   Profile,
+  RoleEmbed,
   Student,
   TeacherAssignment,
 } from '@/lib/types';
 import { ATTENDANCE_STATUSES, STORAGE_BUCKET } from '@/lib/types';
 import { termLabel, todayISO } from '@/lib/format';
 import { LoadingState, PageHeader } from '@/components/ui';
+
+// Baris enrollment yang hanya mengambil identitas siswanya.
+interface EnrolledStudentRow {
+  students: Student | null;
+}
 
 const STATUS_LABEL: Record<AttendanceStatus, string> = {
   hadir: 'Hadir',
@@ -121,8 +127,8 @@ export default function NewMeetingPage() {
           .from('profiles')
           .select('roles:role_id(name)')
           .eq('id', user.id)
-          .single();
-        const isAdmin = (profile?.roles as any)?.name === 'admin';
+          .single<RoleEmbed>();
+        const isAdmin = profile?.roles?.name === 'admin';
 
         let q = supabase
           .from('teacher_assignments')
@@ -214,11 +220,12 @@ export default function NewMeetingPage() {
         .eq('class_id', classId)
         .eq('term_id', term.id)
         .eq('is_active', true)
-        .or(`end_date.is.null,end_date.gte.${meetingDate}`);
+        .or(`end_date.is.null,end_date.gte.${meetingDate}`)
+        .returns<EnrolledStudentRow[]>();
       if (cancelled) return;
-      const list = ((data as any[]) ?? [])
-        .map((row) => row.students as Student)
-        .filter((s) => s && s.status === 'aktif')
+      const list = (data ?? [])
+        .flatMap((row) => (row.students ? [row.students] : []))
+        .filter((s) => s.status === 'aktif')
         .sort((a, b) => a.full_name.localeCompare(b.full_name));
       setStudents(list);
       setStatusMap(

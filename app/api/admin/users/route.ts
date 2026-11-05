@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import type { RoleEmbed } from '@/lib/types';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 // Pastikan pemanggil adalah admin aktif (dicek lewat sesi + profiles).
@@ -13,9 +14,8 @@ async function requireAdmin() {
     .from('profiles')
     .select('is_active, roles:role_id(name)')
     .eq('id', user.id)
-    .single();
-  if (!profile?.is_active || (profile.roles as any)?.name !== 'admin')
-    return null;
+    .single<{ is_active: boolean } & RoleEmbed>();
+  if (!profile?.is_active || profile.roles?.name !== 'admin') return null;
   return user;
 }
 

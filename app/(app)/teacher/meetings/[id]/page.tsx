@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Pencil, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/toast';
-import type { Meeting, RoleName } from '@/lib/types';
+import type { Meeting, RoleEmbed, RoleName } from '@/lib/types';
 import { formatDate, termLabel } from '@/lib/format';
 import AttendanceEditor from '@/components/attendance-editor';
 import PhotoUploader from '@/components/photo-uploader';
@@ -17,7 +17,6 @@ import {
   Modal,
   PageHeader,
   Spinner,
-  btnDanger,
   btnPrimary,
   btnSecondary,
   btnSmall,
@@ -69,8 +68,8 @@ export default function MeetingDetailPage() {
         .from('profiles')
         .select('roles:role_id(name)')
         .eq('id', user.id)
-        .single();
-      setRole(((profile?.roles as any)?.name ?? null) as RoleName | null);
+        .single<RoleEmbed>();
+      setRole(profile?.roles?.name ?? null);
     }
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps

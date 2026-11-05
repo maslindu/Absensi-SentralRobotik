@@ -352,6 +352,13 @@ create table if not exists attendance (
   student_name_snapshot text not null,        -- nama pada saat pertemuan dibuat
   status                attendance_status not null default 'hadir',
   remarks               text,
+  -- Penilaian per pertemuan; keduanya opsional & berdiri sendiri
+  score                 numeric(5,2)
+    constraint attendance_score_range
+    check (score is null or (score >= 0 and score <= 100)),
+  progress              text
+    constraint attendance_progress_valid
+    check (progress is null or progress in ('berkembang', 'cukup', 'belum')),
   created_at            timestamptz not null default now(),
   updated_at            timestamptz not null default now(),
   unique (meeting_id, student_id)

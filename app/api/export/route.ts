@@ -2,10 +2,38 @@ import { NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { STORAGE_BUCKET } from '@/lib/types';
+import { STORAGE_BUCKET, type RoleEmbed } from '@/lib/types';
 import { monthRange } from '@/lib/format';
 
 export const runtime = 'nodejs';
+
+// Bentuk kolom hasil kueri (relasi yang di-embed PostgREST dinyatakan manual).
+interface MeetingRow {
+  id: string;
+  meeting_date: string;
+  meeting_number: number | null;
+  material: string | null;
+  class_id: string;
+  school_id: string;
+  term_id: string;
+  actual_teacher: { full_name: string } | null;
+  schools: { name: string } | null;
+  classes: { name: string } | null;
+  academic_terms: { year_label: string; semester: string } | null;
+}
+
+interface AttendanceRow {
+  meeting_id: string;
+  student_name_snapshot: string;
+  status: string;
+}
+
+interface PhotoRow {
+  meeting_id: string;
+  file_path: string;
+}
+
+type SheetRow = (string | number | null)[];
 
 // GET /api/export?month=YYYY-MM[&school_id=...]
 // Membangun file .xlsx rekap bulanan (README §12) — hanya admin.
@@ -21,9 +49,8 @@ export async function GET(request: Request) {
     .from('profiles')
     .select('is_active, roles:role_id(name)')
     .eq('id', user.id)
-    .single();
-  const role = (profile?.roles as any)?.name;
-  if (!profile?.is_active || role !== 'admin') {
+    .single<{ is_active: boolean } & RoleEmbed>();
+  if (!profile?.is_active || profile.roles?.name !== 'admin') {
     return NextResponse.json(
       { error: 'Hanya admin yang boleh export' },
       { status: 403 }
@@ -61,7 +88,7 @@ export async function GET(request: Request) {
   if (mErr) {
     return NextResponse.json({ error: mErr.message }, { status: 500 });
   }
-  const meetingList = (meetings ?? []) as any[];
+  const meetingList = (meetings ?? []) as unknown as MeetingRow[];
 
   if (meetingList.length === 0) {
     return NextResponse.json(
@@ -100,7 +127,7 @@ export async function GET(request: Request) {
     entry.dates.push(m.meeting_date);
     byTeacherSchool.set(key, entry);
   }
-  const rekapRows: any[][] = [
+  const rekapRows: SheetRow[] = [
     ['Pengajar', 'Sekolah', 'Jumlah Pertemuan', 'Tanggal Mengajar'],
   ];
   for (const e of byTeacherSchool.values()) {
@@ -118,15 +145,15 @@ export async function GET(request: Request) {
   );
 
   // ---- Sheet 2: Presensi siswa pivot per kelas (query B README §12) ----
-  const attRows = (attendance ?? []) as any[];
-  const attByMeeting = new Map<string, any[]>();
+  const attRows = (attendance ?? []) as unknown as AttendanceRow[];
+  const attByMeeting = new Map<string, AttendanceRow[]>();
   for (const a of attRows) {
     const arr = attByMeeting.get(a.meeting_id) ?? [];
     arr.push(a);
     attByMeeting.set(a.meeting_id, arr);
   }
 
-  const classMeetings = new Map<string, any[]>();
+  const classMeetings = new Map<string, MeetingRow[]>();
   for (const m of meetingList) {
     const key = `${m.schools?.name} — Kelas ${m.classes?.name}`;
     const arr = classMeetings.get(key) ?? [];
@@ -134,7 +161,7 @@ export async function GET(request: Request) {
     classMeetings.set(key, arr);
   }
 
-  const pivotRows: any[][] = [];
+  const pivotRows: SheetRow[] = [];
   for (const [classLabel, ms] of classMeetings) {
     const sorted = [...ms].sort(
       (a, b) => (a.meeting_number ?? 0) - (b.meeting_number ?? 0)
@@ -168,7 +195,7 @@ export async function GET(request: Request) {
   );
 
   // ---- Sheet 3: Materi ----
-  const materiRows: any[][] = [
+  const materiRows: SheetRow[] = [
     ['Tanggal', 'Guru', 'Sekolah', 'Kelas', 'Pertemuan ke-', 'Materi'],
   ];
   for (const m of meetingList) {
@@ -189,10 +216,10 @@ export async function GET(request: Request) {
 
   // ---- Sheet 4: Dokumentasi (signed URL 7 hari) ----
   const meetingById = new Map(meetingList.map((m) => [m.id, m]));
-  const dokRows: any[][] = [
+  const dokRows: SheetRow[] = [
     ['Tanggal', 'Guru', 'Sekolah', 'Kelas', 'Link Foto'],
   ];
-  for (const p of (photos ?? []) as any[]) {
+  for (const p of (photos ?? []) as unknown as PhotoRow[]) {
     const m = meetingById.get(p.meeting_id);
     if (!m) continue;
     const { data: signed } = await admin.storage

@@ -28,6 +28,24 @@ interface ClassPivot {
   rows: { name: string; statuses: Record<number, string> }[];
 }
 
+// Bentuk kolom yang di-embed PostgREST pada kueri di bawah.
+interface MeetingLite {
+  id: string;
+  meeting_date: string;
+  meeting_number: number;
+  school_id: string;
+  class_id: string;
+  actual_teacher: { full_name: string } | null;
+  schools: { name: string } | null;
+  classes: { name: string } | null;
+}
+
+interface AttendanceLite {
+  meeting_id: string;
+  student_name_snapshot: string;
+  status: string;
+}
+
 export default function ReportsPage() {
   const supabase = createClient();
   const toast = useToast();
@@ -62,17 +80,20 @@ export default function ReportsPage() {
         'id, meeting_date, meeting_number, school_id, class_id, actual_teacher:actual_teacher_id(full_name), schools:school_id(name), classes:class_id(name)'
       )
       .gte('meeting_date', start)
-      .lt('meeting_date', end)
-      .order('meeting_date');
+      .lt('meeting_date', end);
     if (schoolFilter) q = q.eq('school_id', schoolFilter);
 
-    const { data: meetings, error } = await q;
+    // `returns()` dipasang terakhir: setelah transform, builder tidak lagi
+    // menerima filter seperti `eq`.
+    const { data: meetings, error } = await q
+      .order('meeting_date')
+      .returns<MeetingLite[]>();
     if (error) {
       toast('Gagal memuat data: ' + error.message, 'error');
       setLoading(false);
       return;
     }
-    const meetingList = (meetings ?? []) as any[];
+    const meetingList = meetings ?? [];
 
     // Rekap A: ringkasan mengajar per guru per sekolah
     const byKey = new Map<string, TeacherSummary>();
@@ -98,15 +119,16 @@ export default function ReportsPage() {
         .in(
           'meeting_id',
           meetingList.map((m) => m.id)
-        );
-      const attByMeeting = new Map<string, any[]>();
-      for (const a of (attendance ?? []) as any[]) {
+        )
+        .returns<AttendanceLite[]>();
+      const attByMeeting = new Map<string, AttendanceLite[]>();
+      for (const a of attendance ?? []) {
         const arr = attByMeeting.get(a.meeting_id) ?? [];
         arr.push(a);
         attByMeeting.set(a.meeting_id, arr);
       }
 
-      const byClass = new Map<string, any[]>();
+      const byClass = new Map<string, MeetingLite[]>();
       for (const m of meetingList) {
         const label = `${m.schools?.name} — Kelas ${m.classes?.name}`;
         const arr = byClass.get(label) ?? [];

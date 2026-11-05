@@ -1,13 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ChevronDown,
+  ChevronRight,
   Download,
   FileSpreadsheet,
   Loader2,
   Plus,
   Upload,
   UserMinus,
+  Users,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/toast';
@@ -44,9 +47,11 @@ export default function TeacherStudentsPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
   const [listLoading, setListLoading] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const [addOpen, setAddOpen] = useState(false);
   const [addMode, setAddMode] = useState<'baru' | 'sudah-ada'>('baru');
+  const [addClassId, setAddClassId] = useState('');
   const [newName, setNewName] = useState('');
   const [newNis, setNewNis] = useState('');
   const [existingStudents, setExistingStudents] = useState<Student[]>([]);
@@ -58,6 +63,7 @@ export default function TeacherStudentsPage() {
 
   // import excel
   const [importOpen, setImportOpen] = useState(false);
+  const [importClassId, setImportClassId] = useState('');
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{
     added: number;
@@ -85,44 +91,129 @@ export default function TeacherStudentsPage() {
       if (activeTerm) {
         const { data: asg } = await supabase
           .from('teacher_assignments')
-          .select(
-            '*, schools:school_id(id, name), classes:class_id(id, name)'
-          )
+          .select('*, schools:school_id(id, name), classes:class_id(id, name)')
           .eq('teacher_id', user.id)
           .eq('term_id', activeTerm.id)
           .eq('is_active', true);
-        const list = (asg as TeacherAssignment[]) ?? [];
-        setAssignments(list);
+        setAssignments((asg as TeacherAssignment[]) ?? []);
       }
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Sekolah yang diampu (unik) & kelas yang diampu di sekolah terpilih.
+  const assignedSchools = useMemo(
+    () =>
+      assignments.reduce<TeacherAssignment[]>(
+        (result, assignment) =>
+          result.some((item) => item.school_id === assignment.school_id)
+            ? result
+            : [...result, assignment],
+        []
+      ),
+    [assignments]
+  );
+
+  const classesOfSchool = useMemo(
+    () =>
+      assignments
+        .filter((assignment) => assignment.school_id === schoolFilter)
+        .sort((a, b) =>
+          (a.classes?.name ?? '').localeCompare(b.classes?.name ?? '', 'id')
+        ),
+    [assignments, schoolFilter]
+  );
+
+  // Kelas yang dimuat: satu kelas bila difilter, atau seluruh kelas yang
+  // diampu di sekolah itu — memilih sekolah saja sudah cukup.
+  const classIdsInScope = useMemo(
+    () =>
+      classId
+        ? [classId]
+        : classesOfSchool.map((assignment) => assignment.class_id),
+    [classId, classesOfSchool]
+  );
+
   const loadRoster = useCallback(async () => {
-    if (!classId || !term) {
+    const ids = classIdsInScope;
+    if (ids.length === 0 || !term) {
       setEnrollments([]);
       return;
     }
     setListLoading(true);
     const { data, error } = await supabase
       .from('enrollments')
-      .select('*, students:student_id(id, full_name, nis, status)')
-      .eq('class_id', classId)
+      .select(
+        '*, students:student_id(id, full_name, nis, status), classes:class_id(id, name)'
+      )
+      .in('class_id', ids)
       .eq('term_id', term.id)
       .order('start_date');
     if (error) toast('Gagal memuat roster: ' + error.message, 'error');
     setEnrollments((data as Enrollment[]) ?? []);
     setListLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classId, term]);
+  }, [classIdsInScope, term]);
 
   useEffect(() => {
     loadRoster();
   }, [loadRoster]);
 
+  const classNameOf = useCallback(
+    (id: string) =>
+      classesOfSchool.find((assignment) => assignment.class_id === id)?.classes
+        ?.name ?? '—',
+    [classesOfSchool]
+  );
+
+  // Kelompokkan siswa aktif per kelas, urut sesuai urutan kelas yang diampu.
+  const groups = useMemo(() => {
+    const active = enrollments.filter((en) => !en.end_date);
+    return classIdsInScope
+      .map((id) => ({
+        id,
+        label: 'Kelas ' + classNameOf(id),
+        rows: active
+          .filter((en) => en.class_id === id)
+          .sort((a, b) =>
+            (a.students?.full_name ?? '').localeCompare(
+              b.students?.full_name ?? '',
+              'id'
+            )
+          ),
+      }))
+      .filter((group) => group.rows.length > 0);
+  }, [enrollments, classIdsInScope, classNameOf]);
+
+  const pastRoster = useMemo(
+    () => enrollments.filter((en) => en.end_date),
+    [enrollments]
+  );
+
+  const totalActive = useMemo(
+    () => groups.reduce((n, g) => n + g.rows.length, 0),
+    [groups]
+  );
+
+  function toggleCollapse(id: string) {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // Satu kelas tujuan wajib dipilih saat menambah/import, karena siswa
+  // didaftarkan ke kelas tertentu. Bila hanya mengampu satu kelas di sekolah
+  // itu, kelas tersebut dipakai otomatis.
+  const defaultTargetClass =
+    classId || (classesOfSchool.length === 1 ? classesOfSchool[0].class_id : '');
+
   async function openAdd() {
     setAddMode('baru');
+    setAddClassId(defaultTargetClass);
     setNewName('');
     setNewNis('');
     setSelectedStudentId('');
@@ -141,7 +232,7 @@ export default function TeacherStudentsPage() {
 
   async function addStudent(e: React.FormEvent) {
     e.preventDefault();
-    if (!term) return;
+    if (!term || !addClassId) return;
     setSaving(true);
     try {
       let studentId: string;
@@ -162,7 +253,7 @@ export default function TeacherStudentsPage() {
 
       const { error: enrollErr } = await supabase.from('enrollments').insert({
         student_id: studentId,
-        class_id: classId,
+        class_id: addClassId,
         term_id: term.id,
         start_date: startDate,
       });
@@ -177,7 +268,7 @@ export default function TeacherStudentsPage() {
         );
         return;
       }
-      toast('Siswa ditambahkan ke kelas');
+      toast('Siswa ditambahkan ke kelas ' + classNameOf(addClassId));
       setAddOpen(false);
       loadRoster();
     } finally {
@@ -186,6 +277,7 @@ export default function TeacherStudentsPage() {
   }
 
   function openImport() {
+    setImportClassId(defaultTargetClass);
     setImportResult(null);
     setImportOpen(true);
   }
@@ -194,8 +286,8 @@ export default function TeacherStudentsPage() {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (!classId || !term) {
-      toast('Pilih kelas terlebih dahulu', 'error');
+    if (!importClassId || !term) {
+      toast('Pilih kelas tujuan terlebih dahulu', 'error');
       return;
     }
     setImporting(true);
@@ -211,7 +303,7 @@ export default function TeacherStudentsPage() {
         return;
       }
 
-      // buat identitas siswa (batch) lalu enroll ke kelas yang sedang dipilih
+      // buat identitas siswa (batch) lalu enroll ke kelas tujuan
       const { data: inserted, error: stErr } = await supabase
         .from('students')
         .insert(parsed)
@@ -227,7 +319,7 @@ export default function TeacherStudentsPage() {
 
       const enrollRows = (inserted as { id: string }[]).map((s) => ({
         student_id: s.id,
-        class_id: classId,
+        class_id: importClassId,
         term_id: term.id,
         start_date: todayISO(),
       }));
@@ -290,25 +382,11 @@ export default function TeacherStudentsPage() {
       <div>
         <PageHeader title="Siswa" />
         <p className="rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-6 text-sm text-yellow-800">
-          Kamu belum ditugaskan di kelas mana pun untuk term{' '}
-          {termLabel(term)}.
+          Kamu belum ditugaskan di kelas mana pun untuk term {termLabel(term)}.
         </p>
       </div>
     );
   }
-
-  const activeRoster = enrollments.filter((e) => !e.end_date);
-  const pastRoster = enrollments.filter((e) => e.end_date);
-  const assignedSchools = assignments.reduce<TeacherAssignment[]>(
-    (result, assignment) =>
-      result.some((item) => item.school_id === assignment.school_id)
-        ? result
-        : [...result, assignment],
-    []
-  );
-  const classesOfSchool = assignments.filter(
-    (assignment) => assignment.school_id === schoolFilter
-  );
 
   return (
     <div>
@@ -323,14 +401,14 @@ export default function TeacherStudentsPage() {
             <button
               className={btnSecondary}
               onClick={openImport}
-              disabled={!classId}
+              disabled={!schoolFilter}
             >
               <FileSpreadsheet className="h-4 w-4" /> Import Excel
             </button>
             <button
               className={btnPrimary}
               onClick={openAdd}
-              disabled={!classId}
+              disabled={!schoolFilter}
             >
               <Plus className="h-4 w-4" /> Tambah Siswa
             </button>
@@ -339,48 +417,51 @@ export default function TeacherStudentsPage() {
       />
 
       <div className="mb-4 grid gap-2 sm:grid-cols-2">
-      <select
-        aria-label="Pilih sekolah"
-        className={inputCls}
-        value={schoolFilter}
-        onChange={(e) => {
-          setSchoolFilter(e.target.value);
-          setClassId('');
-        }}
-      >
-        <option value="">Pilih sekolah</option>
-        {assignedSchools.map((assignment) => (
-          <option key={assignment.school_id} value={assignment.school_id}>
-            {assignment.schools?.name}
-          </option>
-        ))}
-      </select>
-      <select
-        className={`${inputCls} mb-4 max-w-sm`}
-        value={classId}
-        onChange={(e) => setClassId(e.target.value)}
-        disabled={!schoolFilter}
-      >
-        <option value="">Pilih kelas</option>
-        {classesOfSchool.map((a) => (
-          <option key={a.id} value={a.class_id}>
-            {a.schools?.name} — Kelas {a.classes?.name}
-          </option>
-        ))}
-      </select>
+        <select
+          aria-label="Pilih sekolah"
+          className={inputCls}
+          value={schoolFilter}
+          onChange={(e) => {
+            setSchoolFilter(e.target.value);
+            setClassId('');
+          }}
+        >
+          <option value="">Pilih sekolah</option>
+          {assignedSchools.map((assignment) => (
+            <option key={assignment.school_id} value={assignment.school_id}>
+              {assignment.schools?.name}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Filter kelas"
+          className={inputCls}
+          value={classId}
+          onChange={(e) => setClassId(e.target.value)}
+          disabled={!schoolFilter}
+        >
+          <option value="">Semua kelas di sekolah ini</option>
+          {classesOfSchool.map((a) => (
+            <option key={a.id} value={a.class_id}>
+              Kelas {a.classes?.name}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {listLoading ? (
-        <LoadingState />
-      ) : !schoolFilter || !classId ? (
+      {!schoolFilter ? (
         <EmptyState
-          title="Pilih sekolah dan kelas"
-          hint="Roster siswa akan dimuat setelah kamu memilih kelas."
+          title="Pilih sekolah"
+          hint="Daftar siswa langsung muncul dikelompokkan per kelas setelah sekolah dipilih."
+          icon={<Users className="h-6 w-6" />}
         />
-      ) : enrollments.length === 0 ? (
+      ) : listLoading ? (
+        <LoadingState />
+      ) : totalActive === 0 ? (
         <EmptyState
-          title="Belum ada siswa di kelas ini"
+          title="Belum ada siswa aktif"
           hint="Tambahkan siswa — bisa juga langsung dari layar presensi saat pertemuan."
+          icon={<Users className="h-6 w-6" />}
           action={
             <button className={btnPrimary} onClick={openAdd}>
               <Plus className="h-4 w-4" /> Tambah Siswa
@@ -389,50 +470,78 @@ export default function TeacherStudentsPage() {
         />
       ) : (
         <>
-          <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
-            <table className="w-full min-w-[520px] text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-4 py-3">Nama</th>
-                  <th className="px-4 py-3">NIS</th>
-                  <th className="px-4 py-3">Masuk</th>
-                  <th className="px-4 py-3 text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activeRoster.map((en) => (
-                  <tr key={en.id} className="border-b border-slate-50 transition-colors hover:bg-slate-50/50">
-                    <td className="px-4 py-3 font-medium">
-                      {en.students?.full_name}
-                    </td>
-                    <td className="px-4 py-3 text-slate-500">
-                      {en.students?.nis || '-'}
-                    </td>
-                    <td className="px-4 py-3 text-slate-500">
-                      {formatDateShort(en.start_date)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        className={btnSmall}
-                        onClick={() => setToEnd(en)}
-                      >
-                        <UserMinus className="h-3.5 w-3.5" /> Keluarkan
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {activeRoster.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-4 py-6 text-center text-slate-400"
-                    >
-                      Tidak ada siswa aktif di kelas ini.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <p className="mb-3 text-sm text-slate-500">
+            {totalActive} siswa aktif di {groups.length} kelas
+          </p>
+          <div className="space-y-4">
+            {groups.map((g) => {
+              const isCollapsed = collapsed.has(g.id);
+              return (
+                <section
+                  key={g.id}
+                  className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleCollapse(g.id)}
+                    className="flex w-full items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-2.5 text-left"
+                  >
+                    {isCollapsed ? (
+                      <ChevronRight className="h-4 w-4 text-slate-400" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-slate-400" />
+                    )}
+                    <span className="font-semibold text-slate-800">
+                      {g.label}
+                    </span>
+                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                      {g.rows.length}
+                    </span>
+                  </button>
+
+                  {!isCollapsed && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[520px] text-sm">
+                        <thead>
+                          <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                            <th className="px-4 py-3">Nama</th>
+                            <th className="px-4 py-3">NIS</th>
+                            <th className="px-4 py-3">Masuk</th>
+                            <th className="px-4 py-3 text-right">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {g.rows.map((en) => (
+                            <tr
+                              key={en.id}
+                              className="border-b border-slate-50 transition-colors hover:bg-slate-50/50"
+                            >
+                              <td className="px-4 py-3 font-medium">
+                                {en.students?.full_name}
+                              </td>
+                              <td className="px-4 py-3 text-slate-500">
+                                {en.students?.nis || '-'}
+                              </td>
+                              <td className="px-4 py-3 text-slate-500">
+                                {formatDateShort(en.start_date)}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <button
+                                  className={btnSmall}
+                                  onClick={() => setToEnd(en)}
+                                >
+                                  <UserMinus className="h-3.5 w-3.5" /> Keluarkan
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              );
+            })}
           </div>
 
           {pastRoster.length > 0 && (
@@ -440,13 +549,17 @@ export default function TeacherStudentsPage() {
               <h2 className="mb-2 mt-6 text-sm font-semibold text-slate-500">
                 Sudah keluar
               </h2>
-              <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white opacity-70">
+              <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white opacity-70 shadow-sm">
                 <table className="w-full min-w-[520px] text-sm">
                   <tbody>
                     {pastRoster.map((en) => (
-                      <tr key={en.id} className="border-b border-slate-50 transition-colors hover:bg-slate-50/50">
-                        <td className="px-4 py-3">
-                          {en.students?.full_name}
+                      <tr
+                        key={en.id}
+                        className="border-b border-slate-50 transition-colors hover:bg-slate-50/50"
+                      >
+                        <td className="px-4 py-3">{en.students?.full_name}</td>
+                        <td className="px-4 py-3 text-slate-500">
+                          Kelas {en.classes?.name ?? '—'}
                         </td>
                         <td className="px-4 py-3 text-slate-500">
                           keluar {formatDateShort(en.end_date)}
@@ -493,6 +606,21 @@ export default function TeacherStudentsPage() {
         </div>
 
         <form onSubmit={addStudent} className="space-y-4">
+          <Field label="Kelas Tujuan" required>
+            <select
+              className={inputCls}
+              value={addClassId}
+              onChange={(e) => setAddClassId(e.target.value)}
+              required
+            >
+              <option value="">— pilih kelas —</option>
+              {classesOfSchool.map((a) => (
+                <option key={a.id} value={a.class_id}>
+                  {a.schools?.name} — Kelas {a.classes?.name}
+                </option>
+              ))}
+            </select>
+          </Field>
           {addMode === 'baru' ? (
             <>
               <Field label="Nama Lengkap" required>
@@ -523,7 +651,7 @@ export default function TeacherStudentsPage() {
                 {existingStudents.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.full_name}
-                    {s.nis ? ` (${s.nis})` : ''}
+                    {s.nis ? ' (' + s.nis + ')' : ''}
                   </option>
                 ))}
               </select>
@@ -567,16 +695,6 @@ export default function TeacherStudentsPage() {
               Kolom <b>A = Nama Lengkap</b> (wajib), kolom <b>B = NIS</b>{' '}
               (opsional). Baris judul otomatis dilewati.
             </p>
-            <p className="mt-1">
-              Semua siswa akan didaftarkan ke kelas yang sedang kamu pilih:{' '}
-              <b>
-                {assignments.find((a) => a.class_id === classId)?.schools
-                  ?.name}{' '}
-                — Kelas{' '}
-                {assignments.find((a) => a.class_id === classId)?.classes?.name}
-              </b>
-              .
-            </p>
             <button
               type="button"
               onClick={downloadStudentTemplate}
@@ -585,6 +703,25 @@ export default function TeacherStudentsPage() {
               <Download className="h-3.5 w-3.5" /> Unduh template contoh
             </button>
           </div>
+
+          <Field
+            label="Kelas Tujuan"
+            required
+            hint="Semua siswa di file akan didaftarkan ke kelas ini."
+          >
+            <select
+              className={inputCls}
+              value={importClassId}
+              onChange={(e) => setImportClassId(e.target.value)}
+            >
+              <option value="">— pilih kelas —</option>
+              {classesOfSchool.map((a) => (
+                <option key={a.id} value={a.class_id}>
+                  {a.schools?.name} — Kelas {a.classes?.name}
+                </option>
+              ))}
+            </select>
+          </Field>
 
           <input
             ref={importFileRef}
@@ -595,7 +732,7 @@ export default function TeacherStudentsPage() {
           />
           <button
             type="button"
-            disabled={importing || !classId}
+            disabled={importing || !importClassId}
             onClick={() => importFileRef.current?.click()}
             className={`${btnPrimary} w-full`}
           >

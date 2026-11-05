@@ -3,6 +3,18 @@ export type RoleName = 'admin' | 'guru';
 export type Semester = 'ganjil' | 'genap';
 export type StudentStatus = 'aktif' | 'nonaktif';
 export type AttendanceStatus = 'hadir' | 'izin' | 'sakit' | 'alpa';
+export type ProgressLevel = 'berkembang' | 'cukup' | 'belum';
+
+/**
+ * Bentuk hasil relasi yang di-embed PostgREST, mis. `roles:role_id(name)`.
+ *
+ * Proyek ini belum memakai tipe database hasil generate, jadi supabase-js
+ * tidak tahu bentuk kolom embed. Pakai tipe ini bersama `.single<RoleEmbed>()`
+ * agar pembacaan peran tetap tercek TypeScript (dulu memakai `as any`).
+ */
+export interface RoleEmbed {
+  roles: { name: RoleName } | null;
+}
 
 export interface Role {
   id: string;
@@ -131,6 +143,10 @@ export interface Attendance {
   student_name_snapshot: string;
   status: AttendanceStatus;
   remarks: string | null;
+  /** Nilai angka 0-100 per pertemuan. null = pengajar tidak menilai dengan angka. */
+  score: number | null;
+  /** Penilaian cepat berkembang/cukup/belum. null = tidak dinilai. */
+  progress: ProgressLevel | null;
   created_at: string;
   updated_at: string;
 }
@@ -146,5 +162,16 @@ export interface ExportLog {
 }
 
 export const ATTENDANCE_STATUSES: AttendanceStatus[] = ['hadir', 'izin', 'sakit', 'alpa'];
+
+export const PROGRESS_LEVELS: ProgressLevel[] = ['berkembang', 'cukup', 'belum'];
+
+export const PROGRESS_LABEL: Record<ProgressLevel, string> = {
+  berkembang: 'Berkembang',
+  cukup: 'Cukup',
+  belum: 'Belum',
+};
+
+/** Nilai tertinggi yang boleh diisi (dijaga juga oleh CHECK di database). */
+export const SCORE_MAX = 100;
 
 export const STORAGE_BUCKET = 'meeting-documentation';
