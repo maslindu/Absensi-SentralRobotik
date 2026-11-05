@@ -92,7 +92,16 @@ export default function AttendanceEditor({
       .eq('meeting_id', meetingId)
       .order('student_name_snapshot');
     if (error) toast('Gagal memuat presensi: ' + error.message, 'error');
-    setRows((data as Attendance[]) ?? []);
+    // Normalkan kolom penilaian ke null. Bila migrasi student_scores.sql belum
+    // dijalankan, kolomnya belum ada sehingga nilainya `undefined` — dan
+    // perbandingan `!== null` akan keliru menganggapnya sudah dinilai.
+    setRows(
+      ((data as Attendance[]) ?? []).map((r) => ({
+        ...r,
+        score: r.score ?? null,
+        progress: r.progress ?? null,
+      }))
+    );
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meetingId]);
